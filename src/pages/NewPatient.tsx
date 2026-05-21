@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, Check, Save } from 'lucide-react';
 
@@ -11,6 +11,7 @@ const ALLERGIES = ['Amendoim', 'Leite', 'Ovo', 'Soja', 'Trigo', 'Frutos do mar']
 
 const NewPatient: React.FC = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
   const [activeTab, setActiveTab] = useState<'pessoal' | 'clinico' | 'habitos'>('pessoal');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -64,6 +65,90 @@ const NewPatient: React.FC = () => {
     }
   }, [dataNascimento]);
 
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchPatientData = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('pacientes')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (fetchError) throw fetchError;
+        if (data) {
+          setNome(data.nome || '');
+          setDataNascimento(data.data_nascimento || '');
+          setSexo(data.sexo || '');
+          setWhatsapp(data.whatsapp || '');
+          setEmail(data.email || '');
+          
+          setPeso(data.peso_inicial ? data.peso_inicial.toString() : '');
+          setAltura(data.altura ? data.altura.toString() : '');
+          
+          const dbObjetivos = data.objetivos || [];
+          const standardObjectives = dbObjetivos.filter((o: string) => OBJECTIVES.includes(o));
+          const customObjective = dbObjetivos.find((o: string) => !OBJECTIVES.includes(o)) || '';
+          setObjetivos(standardObjectives.length > 0 ? standardObjectives : (data.objetivo_texto ? [data.objetivo_texto] : []));
+          setObjetivoOutro(customObjective || (data.objetivo_texto && !OBJECTIVES.includes(data.objetivo_texto) ? data.objetivo_texto : ''));
+          
+          setNivelAtividade(data.nivel_atividade || '');
+          
+          const dbPatologias = data.patologias || [];
+          const standardPat = dbPatologias.filter((p: string) => PATHOLOGIES.includes(p));
+          const customPat = dbPatologias.find((p: string) => !PATHOLOGIES.includes(p) && p !== 'Nenhum') || '';
+          if (dbPatologias.includes('Nenhum')) {
+            setPatologias(['Nenhum']);
+          } else {
+            setPatologias(standardPat);
+            setPatologiasOutro(customPat);
+          }
+
+          const dbRestricoes = data.restricoes_alimentares || [];
+          const standardRest = dbRestricoes.filter((r: string) => RESTRICTIONS.includes(r));
+          const customRest = dbRestricoes.find((r: string) => !RESTRICTIONS.includes(r) && r !== 'Nenhum') || '';
+          if (dbRestricoes.includes('Nenhum')) {
+            setRestricoes(['Nenhum']);
+          } else {
+            setRestricoes(standardRest);
+            setRestricoesOutro(customRest);
+          }
+
+          const dbAlergias = data.alergias || [];
+          const standardAlergias = dbAlergias.filter((a: string) => ALLERGIES.includes(a));
+          const customAlergias = dbAlergias.find((a: string) => !ALLERGIES.includes(a) && a !== 'Nenhum') || '';
+          if (dbAlergias.includes('Nenhum')) {
+            setAlergias(['Nenhum']);
+          } else {
+            setAlergias(standardAlergias);
+            setAlergiasOutro(customAlergias);
+          }
+
+          setMedicamentos(data.medicamentos || '');
+          setSuplementos(data.suplementos || '');
+
+          setRefeicoesDia(data.refeicoes_por_dia ? data.refeicoes_por_dia.toString() : '');
+          setHoraAcorda(data.horario_acorda || '');
+          setHoraDorme(data.horario_dorme || '');
+          setAguaDia(data.litros_agua ? data.litros_agua.toString() : '');
+          setPraticaAtividade(data.atividade_fisica ? 'sim' : 'nao');
+          setQualAtividade(data.atividade_fisica_descricao || '');
+          setObservacoes(data.observacoes || '');
+        }
+      } catch (err: any) {
+        console.error('Erro ao buscar dados do paciente:', err);
+        setError('Erro ao carregar dados do paciente para edição.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPatientData();
+  }, [id]);
+
   // Calculated IMC
   const pesoNum = parseFloat(peso.replace(',', '.'));
   const alturaNum = parseFloat(altura); // assumed in cm
@@ -114,39 +199,72 @@ const NewPatient: React.FC = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Sessão expirada. Faça login novamente.');
 
-      const { data: insertedData, error: insertError } = await supabase
-        .from('pacientes')
-        .insert([{
-          nome,
-          data_nascimento: dataNascimento || null,
-          sexo: sexo || null,
-          whatsapp: whatsapp || null,
-          email: email || null,
-          peso_inicial: (pesoNum && !isNaN(pesoNum)) ? pesoNum : null,
-          altura: (alturaNum && !isNaN(alturaNum)) ? alturaNum : null,
-          objetivos: [...objetivos, objetivoOutro].filter(Boolean),
-          objetivo_texto: objetivos.length > 0 ? objetivos[0] : objetivoOutro || null,
-          nivel_atividade: nivelAtividade || null,
-          patologias: [...patologias, patologiasOutro].filter(Boolean),
-          restricoes_alimentares: [...restricoes, restricoesOutro].filter(Boolean),
-          alergias: [...alergias, alergiasOutro].filter(Boolean),
-          medicamentos: medicamentos || null,
-          suplementos: suplementos || null,
-          refeicoes_por_dia: refeicoesDia ? parseInt(refeicoesDia) : null,
-          horario_acorda: horaAcorda || null,
-          horario_dorme: horaDorme || null,
-          litros_agua: aguaDia ? parseFloat(aguaDia.replace(',', '.')) : null,
-          atividade_fisica: praticaAtividade === 'sim',
-          atividade_fisica_descricao: qualAtividade || null,
-          observacoes: observacoes || null,
-          nutricionista_id: session.user.id
-        }])
+      let query;
+      if (id) {
+        query = supabase
+          .from('pacientes')
+          .update({
+            nome,
+            data_nascimento: dataNascimento || null,
+            sexo: sexo || null,
+            whatsapp: whatsapp || null,
+            email: email || null,
+            peso_inicial: (pesoNum && !isNaN(pesoNum)) ? pesoNum : null,
+            altura: (alturaNum && !isNaN(alturaNum)) ? alturaNum : null,
+            objetivos: [...objetivos, objetivoOutro].filter(Boolean),
+            objetivo_texto: objetivos.length > 0 ? objetivos[0] : objetivoOutro || null,
+            nivel_atividade: nivelAtividade || null,
+            patologias: [...patologias, patologiasOutro].filter(Boolean),
+            restricoes_alimentares: [...restricoes, restricoesOutro].filter(Boolean),
+            alergias: [...alergias, alergiasOutro].filter(Boolean),
+            medicamentos: medicamentos || null,
+            suplementos: suplementos || null,
+            refeicoes_por_dia: refeicoesDia ? parseInt(refeicoesDia) : null,
+            horario_acorda: horaAcorda || null,
+            horario_dorme: horaDorme || null,
+            litros_agua: aguaDia ? parseFloat(aguaDia.replace(',', '.')) : null,
+            atividade_fisica: praticaAtividade === 'sim',
+            atividade_fisica_descricao: qualAtividade || null,
+            observacoes: observacoes || null
+          })
+          .eq('id', id);
+      } else {
+        query = supabase
+          .from('pacientes')
+          .insert([{
+            nome,
+            data_nascimento: dataNascimento || null,
+            sexo: sexo || null,
+            whatsapp: whatsapp || null,
+            email: email || null,
+            peso_inicial: (pesoNum && !isNaN(pesoNum)) ? pesoNum : null,
+            altura: (alturaNum && !isNaN(alturaNum)) ? alturaNum : null,
+            objetivos: [...objetivos, objetivoOutro].filter(Boolean),
+            objetivo_texto: objetivos.length > 0 ? objetivos[0] : objetivoOutro || null,
+            nivel_atividade: nivelAtividade || null,
+            patologias: [...patologias, patologiasOutro].filter(Boolean),
+            restricoes_alimentares: [...restricoes, restricoesOutro].filter(Boolean),
+            alergias: [...alergias, alergiasOutro].filter(Boolean),
+            medicamentos: medicamentos || null,
+            suplementos: suplementos || null,
+            refeicoes_por_dia: refeicoesDia ? parseInt(refeicoesDia) : null,
+            horario_acorda: horaAcorda || null,
+            horario_dorme: horaDorme || null,
+            litros_agua: aguaDia ? parseFloat(aguaDia.replace(',', '.')) : null,
+            atividade_fisica: praticaAtividade === 'sim',
+            atividade_fisica_descricao: qualAtividade || null,
+            observacoes: observacoes || null,
+            nutricionista_id: session.user.id
+          }]);
+      }
+
+      const { data: insertedData, error: dbError } = await query
         .select()
         .single();
 
-      if (insertError) throw insertError;
+      if (dbError) throw dbError;
 
-      alert('Paciente cadastrado com sucesso!');
+      alert(id ? 'Paciente atualizado com sucesso!' : 'Paciente cadastrado com sucesso!');
       navigate(`/patients/${insertedData.id}`);
 
     } catch (err: any) {
@@ -164,13 +282,13 @@ const NewPatient: React.FC = () => {
           <ArrowLeft size={24} />
         </button>
         <div>
-          <h1 className="page-title" style={{ marginBottom: 0 }}>Novo Paciente</h1>
-          <p className="page-subtitle" style={{ marginBottom: 0 }}>Preencha a anamnese e os dados do paciente.</p>
+          <h1 className="page-title" style={{ marginBottom: 0 }}>{id ? 'Editar Paciente' : 'Novo Paciente'}</h1>
+          <p className="page-subtitle" style={{ marginBottom: 0 }}>{id ? 'Atualize os dados e a anamnese do paciente.' : 'Preencha a anamnese e os dados do paciente.'}</p>
         </div>
         <div style={{ marginLeft: 'auto' }}>
           <button className="btn-primary" onClick={handleSubmit} disabled={loading}>
             <Save size={20} />
-            {loading ? 'Salvando...' : 'Salvar Paciente'}
+            {loading ? 'Salvando...' : id ? 'Salvar Alterações' : 'Salvar Paciente'}
           </button>
         </div>
       </header>

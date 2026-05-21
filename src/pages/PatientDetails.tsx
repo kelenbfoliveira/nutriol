@@ -51,7 +51,7 @@ const PatientDetails: React.FC = () => {
               {paciente.idade ? `${paciente.idade} anos` : 'Idade não informada'} • {paciente.whatsapp || 'Sem WhatsApp'}
             </p>
           </div>
-          <button className="btn-outline" onClick={() => navigate(`/patients/new`)}>
+          <button className="btn-outline" onClick={() => navigate(`/patients/${id}/edit`)}>
             <Edit size={16} /> Editar Paciente
           </button>
         </div>

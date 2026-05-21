@@ -43,7 +43,8 @@ const NewMealPlanModal: React.FC<NewMealPlanModalProps> = ({ isOpen, onClose, on
         .insert([
           {
             paciente_id: formData.paciente_id,
-            titulo: formData.titulo
+            titulo: formData.titulo,
+            descricao: formData.descricao
           }
         ]);
 

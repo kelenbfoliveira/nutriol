@@ -90,7 +90,7 @@ const MealPlans: React.FC = () => {
                     <FileText size={20} />
                   </div>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {plano.criado_em ? format(parseISO(plano.criado_em), "dd/MM/yyyy") : ''}
+                    {plano.created_at ? format(parseISO(plano.created_at), "dd/MM/yyyy") : ''}
                   </span>
                 </div>
                 
