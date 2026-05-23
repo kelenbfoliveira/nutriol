@@ -14,6 +14,28 @@ interface NewMealPlanModalProps {
   patients: Patient[];
 }
 
+const createEmptyPlan = () => {
+  const emptyDay = () => ({
+    cafe_manha: ['', '', '', '', ''],
+    lanche_manha: ['', '', '', '', ''],
+    almoco: ['', '', '', '', ''],
+    lanche_tarde: ['', '', '', '', ''],
+    jantar: ['', '', '', '', '']
+  });
+
+  return {
+    dias: {
+      segunda: emptyDay(),
+      terca: emptyDay(),
+      quarta: emptyDay(),
+      quinta: emptyDay(),
+      sexta: emptyDay(),
+      sabado: emptyDay(),
+      domingo: emptyDay()
+    }
+  };
+};
+
 const NewMealPlanModal: React.FC<NewMealPlanModalProps> = ({ isOpen, onClose, onSuccess, patients }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -44,7 +66,8 @@ const NewMealPlanModal: React.FC<NewMealPlanModalProps> = ({ isOpen, onClose, on
           {
             paciente_id: formData.paciente_id,
             titulo: formData.titulo,
-            descricao: formData.descricao
+            descricao: formData.descricao,
+            conteudo: createEmptyPlan()
           }
         ]);
 

@@ -44,8 +44,8 @@ const Appointments: React.FC = () => {
     return patientName.includes(searchTerm.toLowerCase());
   });
 
-  const upcomingConsultas = filteredConsultas.filter(c => isAfter(parseISO(c.data_consulta), new Date()) || isToday(parseISO(c.data_consulta)));
-  const pastConsultas = filteredConsultas.filter(c => !isAfter(parseISO(c.data_consulta), new Date()) && !isToday(parseISO(c.data_consulta)));
+  const upcomingConsultas = filteredConsultas.filter(c => isAfter(parseISO(c.data_consulta.replace(' ', 'T')), new Date()) || isToday(parseISO(c.data_consulta.replace(' ', 'T'))));
+  const pastConsultas = filteredConsultas.filter(c => !isAfter(parseISO(c.data_consulta.replace(' ', 'T')), new Date()) && !isToday(parseISO(c.data_consulta.replace(' ', 'T'))));
 
   return (
     <div className="fade-in">
@@ -108,15 +108,15 @@ const Appointments: React.FC = () => {
                 ) : upcomingConsultas.map(consulta => (
                   <div key={consulta.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', border: '1px solid var(--border-color)', borderRadius: '12px', backgroundColor: '#faf9f6', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent-gold-light)'} onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-color)'}>
                     <div style={{ backgroundColor: 'var(--white)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', textAlign: 'center', minWidth: '70px' }}>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{format(parseISO(consulta.data_consulta), 'MMM', { locale: ptBR })}</p>
-                      <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)', lineHeight: 1 }}>{format(parseISO(consulta.data_consulta), 'dd')}</p>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{format(parseISO(consulta.data_consulta.replace(' ', 'T')), 'MMM', { locale: ptBR })}</p>
+                      <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)', lineHeight: 1 }}>{format(parseISO(consulta.data_consulta.replace(' ', 'T')), 'dd')}</p>
                     </div>
                     <div style={{ flex: 1 }}>
                       <h4 style={{ fontSize: '1.1rem', color: 'var(--text-dark)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <User size={16} color="var(--text-muted)" /> {consulta.pacientes?.nome || 'Paciente Desconhecido'}
                       </h4>
                       <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                        <Clock size={14} /> {consulta.data_consulta.length > 10 ? format(parseISO(consulta.data_consulta), "HH:mm") : '--:--'}
+                        <Clock size={14} /> {consulta.data_consulta.length > 10 ? format(parseISO(consulta.data_consulta.replace(' ', 'T')), "HH:mm") : '--:--'}
                       </p>
                     </div>
                     <button className="btn-outline" style={{ fontSize: '0.85rem', padding: '8px 12px' }} onClick={() => navigate(`/patients/${consulta.paciente_id}`)}>Ver Perfil</button>
@@ -135,7 +135,7 @@ const Appointments: React.FC = () => {
                         <div style={{ flex: 1 }}>
                           <h4 style={{ fontSize: '1rem', color: 'var(--text-dark)', fontWeight: 500 }}>{consulta.pacientes?.nome || 'Paciente Desconhecido'}</h4>
                           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                            {format(parseISO(consulta.data_consulta), "dd 'de' MMMM, yyyy 'às' HH:mm", { locale: ptBR })}
+                            {format(parseISO(consulta.data_consulta.replace(' ', 'T')), "dd 'de' MMMM, yyyy 'às' HH:mm", { locale: ptBR })}
                           </p>
                         </div>
                       </div>

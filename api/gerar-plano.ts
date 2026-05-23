@@ -1,68 +1,37 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import fs from 'fs'
-import path from 'path'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { VercelRequest, VercelResponse } from '@vercel/node';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Helper to load GOOGLE_API_KEY from .env manually
-function loadApiKey() {
-  let apiKey = process.env.GOOGLE_API_KEY;
-  if (!apiKey) {
-    try {
-      const envPath = path.resolve(process.cwd(), '.env');
-      if (fs.existsSync(envPath)) {
-        const envContent = fs.readFileSync(envPath, 'utf-8');
-        const match = envContent.match(/^GOOGLE_API_KEY\s*=\s*(.+)$/m);
-        if (match) {
-          apiKey = match[1].trim().replace(/^["']|["']$/g, '');
-        }
-      }
-    } catch (e) {
-      console.warn('Erro ao ler .env para o plugin de API:', e);
-    }
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS setup
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
   }
-  return apiKey;
-}
 
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [
-    react(),
-    {
-      name: 'api-dev-server',
-      configureServer(server) {
-        server.middlewares.use((req, res, next) => {
-          if (req.url?.startsWith('/api/gerar-plano')) {
-            if (req.method !== 'POST') {
-              res.statusCode = 405;
-              res.end('Method Not Allowed');
-              return;
-            }
+  try {
+    const { dados_do_paciente } = req.body;
+    const apiKey = process.env.GOOGLE_API_KEY;
 
-            let bodyStr = '';
-            req.on('data', chunk => { bodyStr += chunk; });
-            req.on('end', async () => {
-              try {
-                const apiKey = loadApiKey();
-                if (!apiKey) {
-                  res.statusCode = 500;
-                  res.setHeader('Content-Type', 'application/json');
-                  res.end(JSON.stringify({ error: 'GOOGLE_API_KEY não encontrada no arquivo .env local.' }));
-                  return;
-                }
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GOOGLE_API_KEY não configurada no ambiente.' });
+    }
 
-                const body = JSON.parse(bodyStr || '{}');
-                const { dados_do_paciente } = body;
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      generationConfig: {
+        responseMimeType: "application/json",
+      }
+    });
 
-                const genAI = new GoogleGenerativeAI(apiKey);
-                const model = genAI.getGenerativeModel({
-                  model: "gemini-2.5-flash",
-                  generationConfig: {
-                    responseMimeType: "application/json",
-                  }
-                });
-
-                const prompt = `Você é um nutricionista clínico profissional especialista na culinária e rotina brasileira.
+    const prompt = `Você é um nutricionista clínico profissional especialista na culinária e rotina brasileira.
 Gere um plano alimentar semanal completo, saudável e diversificado com base nos dados do paciente fornecidos abaixo.
 
 Dados do Paciente (Metas, Alergias, Restrições e Histórico):
@@ -151,24 +120,11 @@ O formato do JSON retornado deve seguir exatamente esta estrutura:
   ]
 }`;
 
-                const result = await model.generateContent(prompt);
-                const text = result.response.text();
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
 
-                res.statusCode = 200;
-                res.setHeader('Content-Type', 'application/json');
-                res.end(text);
-              } catch (err: any) {
-                console.error('Erro na chamada dev-API do Gemini:', err);
-                res.statusCode = 500;
-                res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({ error: err.message || 'Erro interno na chamada do Gemini local.' }));
-              }
-            });
-          } else {
-            next();
-          }
-        });
-      }
-    }
-  ],
-})
+    return res.status(200).json(JSON.parse(text));
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || 'Erro interno do servidor.' });
+  }
+}

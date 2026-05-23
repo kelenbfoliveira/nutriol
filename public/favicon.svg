@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <!-- Background circle -->
-  <circle cx="32" cy="32" r="32" fill="#1a4f36"/>
+  <circle cx="32" cy="32" r="32" fill="#183f2e"/>
   <!-- Leaf/plant stem -->
   <path d="M32 48 C32 48 32 28 32 22" stroke="#c5a059" stroke-width="2.5" stroke-linecap="round"/>
   <!-- Left leaf -->
-  <path d="M32 30 C32 30 20 26 18 16 C18 16 30 16 32 30" fill="#ecfdf5" opacity="0.9"/>
+  <path d="M32 30 C32 30 20 26 18 16 C18 16 30 16 32 30" fill="#fdf2f4" opacity="0.9"/>
   <!-- Right leaf -->
   <path d="M32 36 C32 36 44 30 48 20 C48 20 36 18 32 36" fill="#ffffff" opacity="0.85"/>
   <!-- Small dot accent (gold) -->

@@ -1,68 +1,38 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import fs from 'fs'
-import path from 'path'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { GoogleGenerativeAI } from "npm:@google/generative-ai"
 
-// Helper to load GOOGLE_API_KEY from .env manually
-function loadApiKey() {
-  let apiKey = process.env.GOOGLE_API_KEY;
-  if (!apiKey) {
-    try {
-      const envPath = path.resolve(process.cwd(), '.env');
-      if (fs.existsSync(envPath)) {
-        const envContent = fs.readFileSync(envPath, 'utf-8');
-        const match = envContent.match(/^GOOGLE_API_KEY\s*=\s*(.+)$/m);
-        if (match) {
-          apiKey = match[1].trim().replace(/^["']|["']$/g, '');
-        }
-      }
-    } catch (e) {
-      console.warn('Erro ao ler .env para o plugin de API:', e);
-    }
-  }
-  return apiKey;
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [
-    react(),
-    {
-      name: 'api-dev-server',
-      configureServer(server) {
-        server.middlewares.use((req, res, next) => {
-          if (req.url?.startsWith('/api/gerar-plano')) {
-            if (req.method !== 'POST') {
-              res.statusCode = 405;
-              res.end('Method Not Allowed');
-              return;
-            }
+serve(async (req) => {
+  // Handle CORS preflight request
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
 
-            let bodyStr = '';
-            req.on('data', chunk => { bodyStr += chunk; });
-            req.on('end', async () => {
-              try {
-                const apiKey = loadApiKey();
-                if (!apiKey) {
-                  res.statusCode = 500;
-                  res.setHeader('Content-Type', 'application/json');
-                  res.end(JSON.stringify({ error: 'GOOGLE_API_KEY não encontrada no arquivo .env local.' }));
-                  return;
-                }
+  try {
+    const { dados_do_paciente } = await req.json()
+    
+    // Retrieve API Key from Deno Environment
+    const apiKey = Deno.env.get('GOOGLE_API_KEY')
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({ error: 'GOOGLE_API_KEY não configurada nas variáveis de ambiente do Supabase.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
-                const body = JSON.parse(bodyStr || '{}');
-                const { dados_do_paciente } = body;
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      generationConfig: {
+        responseMimeType: "application/json",
+      }
+    })
 
-                const genAI = new GoogleGenerativeAI(apiKey);
-                const model = genAI.getGenerativeModel({
-                  model: "gemini-2.5-flash",
-                  generationConfig: {
-                    responseMimeType: "application/json",
-                  }
-                });
-
-                const prompt = `Você é um nutricionista clínico profissional especialista na culinária e rotina brasileira.
+    const prompt = `Você é um nutricionista clínico profissional especialista na culinária e rotina brasileira.
 Gere um plano alimentar semanal completo, saudável e diversificado com base nos dados do paciente fornecidos abaixo.
 
 Dados do Paciente (Metas, Alergias, Restrições e Histórico):
@@ -149,26 +119,19 @@ O formato do JSON retornado deve seguir exatamente esta estrutura:
       }
     }
   ]
-}`;
+}`
 
-                const result = await model.generateContent(prompt);
-                const text = result.response.text();
+    const result = await model.generateContent(prompt)
+    const text = result.response.text()
 
-                res.statusCode = 200;
-                res.setHeader('Content-Type', 'application/json');
-                res.end(text);
-              } catch (err: any) {
-                console.error('Erro na chamada dev-API do Gemini:', err);
-                res.statusCode = 500;
-                res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({ error: err.message || 'Erro interno na chamada do Gemini local.' }));
-              }
-            });
-          } else {
-            next();
-          }
-        });
-      }
-    }
-  ],
+    return new Response(
+      text,
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  } catch (error: any) {
+    return new Response(
+      JSON.stringify({ error: error.message || 'Erro desconhecido na geração do plano.' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
 })

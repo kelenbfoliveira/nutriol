@@ -55,7 +55,7 @@ const PatientsList: React.FC = () => {
   const getLastConsultation = (consultas: any[]) => {
     if (!consultas || consultas.length === 0) return 'Não agendada';
     const sorted = [...consultas].sort((a, b) => new Date(b.data_consulta).getTime() - new Date(a.data_consulta).getTime());
-    return format(parseISO(sorted[0].data_consulta), "dd/MM/yyyy", { locale: ptBR });
+    return format(parseISO(sorted[0].data_consulta.replace(' ', 'T')), "dd/MM/yyyy", { locale: ptBR });
   };
 
   return (

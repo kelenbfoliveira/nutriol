@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import {
-  ArrowLeft, Save, Plus, X, Check, Scale, Activity, Utensils,
+  ArrowLeft, Save, Plus, X, Check, Scale, Activity,
   Calendar, FileText, ChevronDown, ChevronUp, AlertCircle
 } from 'lucide-react';
 import {
@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { MealPlanManager } from '../components/MealPlanManager';
 
 const OBJECTIVES = ['Emagrecer', 'Ganhar massa', 'Controlar diabetes', 'Saúde geral', 'Performance esportiva', 'Reeducação alimentar'];
 const ACTIVITY_LEVELS = ['Sedentário', 'Levemente ativo', 'Moderadamente ativo', 'Muito ativo', 'Extremamente ativo'];
@@ -29,22 +30,34 @@ const NovaConsultaModal: React.FC<NovaConsultaModalProps> = ({ pacienteId, isOpe
   const today = new Date().toISOString().split('T')[0];
   const [form, setForm] = useState({
     data_consulta: today,
+    hora_consulta: new Date().toTimeString().slice(0, 5),
     peso: '',
     cintura: '',
     quadril: '',
     percentual_gordura: '',
     observacoes: '',
-    proximo_retorno: ''
+    proximo_retorno: '',
+    hora_retorno: '09:00'
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (isOpen) {
-      setForm({ data_consulta: today, peso: '', cintura: '', quadril: '', percentual_gordura: '', observacoes: '', proximo_retorno: '' });
+      setForm({
+        data_consulta: today,
+        hora_consulta: new Date().toTimeString().slice(0, 5),
+        peso: '',
+        cintura: '',
+        quadril: '',
+        percentual_gordura: '',
+        observacoes: '',
+        proximo_retorno: '',
+        hora_retorno: '09:00'
+      });
       setError('');
     }
-  }, [isOpen]);
+  }, [isOpen, today]);
 
   if (!isOpen) return null;
 
@@ -58,12 +71,17 @@ const NovaConsultaModal: React.FC<NovaConsultaModalProps> = ({ pacienteId, isOpe
     setLoading(true);
     setError('');
     try {
+      const datetimeString = `${form.data_consulta}T${form.hora_consulta || '00:00'}:00`;
+      const proximoRetornoString = form.proximo_retorno
+        ? `${form.proximo_retorno}T${form.hora_retorno || '09:00'}:00`
+        : null;
+
       const payload: any = {
         paciente_id: pacienteId,
-        data_consulta: form.data_consulta,
+        data_consulta: datetimeString,
         peso: parseFloat(form.peso.replace(',', '.')),
         observacoes: form.observacoes || null,
-        proximo_retorno: form.proximo_retorno || null
+        proximo_retorno: proximoRetornoString
       };
       if (form.cintura) payload.cintura = parseFloat(form.cintura.replace(',', '.'));
       if (form.quadril) payload.quadril = parseFloat(form.quadril.replace(',', '.'));
@@ -108,6 +126,13 @@ const NovaConsultaModal: React.FC<NovaConsultaModalProps> = ({ pacienteId, isOpe
               <label className="form-label">Data da Consulta *</label>
               <input type="date" name="data_consulta" value={form.data_consulta} onChange={handleChange} style={inputStyle} required />
             </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Hora da Consulta *</label>
+              <input type="time" name="hora_consulta" value={form.hora_consulta} onChange={handleChange} style={inputStyle} required />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
             <div className="form-group" style={{ marginBottom: 0, position: 'relative' }}>
               <label className="form-label">Peso Atual (kg) *</label>
               <input type="number" step="0.1" name="peso" value={form.peso} onChange={handleChange} placeholder="Ex: 72.5" style={{ ...inputStyle, paddingRight: '40px' }} />
@@ -138,9 +163,15 @@ const NovaConsultaModal: React.FC<NovaConsultaModalProps> = ({ pacienteId, isOpe
             <textarea name="observacoes" value={form.observacoes} onChange={handleChange} placeholder="Evolução, intercorrências, orientações..." style={{ ...inputStyle, minHeight: '90px', resize: 'vertical' }} />
           </div>
 
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Próximo Retorno</label>
-            <input type="date" name="proximo_retorno" value={form.proximo_retorno} onChange={handleChange} style={inputStyle} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Próximo Retorno (Data)</label>
+              <input type="date" name="proximo_retorno" value={form.proximo_retorno} onChange={handleChange} style={inputStyle} />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Próximo Retorno (Hora)</label>
+              <input type="time" name="hora_retorno" value={form.hora_retorno} onChange={handleChange} style={inputStyle} disabled={!form.proximo_retorno} />
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
@@ -175,7 +206,6 @@ const TagChip: React.FC<{ label: string; active: boolean; onClick: () => void }>
 // ─── Componente Principal ──────────────────────────────────────────────────
 const PatientDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
 
   // ── Patient Data State ──
   const [loading, setLoading] = useState(true);
@@ -221,10 +251,7 @@ const PatientDetails: React.FC = () => {
   const [isConsultaModalOpen, setIsConsultaModalOpen] = useState(false);
   const [expandedConsulta, setExpandedConsulta] = useState<string | null>(null);
 
-  // ── Planos State ──
-  const [planos, setPlanos] = useState<any[]>([]);
-  const [planosLoading, setPlanosLoading] = useState(true);
-  const [expandedPlano, setExpandedPlano] = useState<string | null>(null);
+
 
   // ── Computed ──
   const pesoNum = parseFloat(peso.replace(',', '.'));
@@ -301,20 +328,7 @@ const PatientDetails: React.FC = () => {
 
   useEffect(() => { fetchConsultas(); }, [fetchConsultas]);
 
-  // ── Fetch Planos ──
-  const fetchPlanos = useCallback(async () => {
-    if (!id) return;
-    setPlanosLoading(true);
-    const { data, error } = await supabase
-      .from('planos_alimentares')
-      .select('*')
-      .eq('paciente_id', id)
-      .order('created_at', { ascending: false });
-    if (!error && data) setPlanos(data);
-    setPlanosLoading(false);
-  }, [id]);
 
-  useEffect(() => { fetchPlanos(); }, [fetchPlanos]);
 
   // ── Save Patient ──
   const handleSave = async () => {
@@ -367,7 +381,7 @@ const PatientDetails: React.FC = () => {
 
   // ── Chart data ──
   const chartData = consultas.map(c => ({
-    date: format(parseISO(c.data_consulta), 'dd/MM', { locale: ptBR }),
+    date: format(parseISO(c.data_consulta.replace(' ', 'T')), 'dd/MM', { locale: ptBR }),
     peso: c.peso,
     gordura: c.percentual_gordura
   }));
@@ -685,13 +699,13 @@ const PatientDetails: React.FC = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                       <div style={{ backgroundColor: '#ecfdf5', padding: '8px 14px', borderRadius: '8px', textAlign: 'center', minWidth: '70px' }}>
                         <p style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, textTransform: 'uppercase' }}>
-                          {format(parseISO(c.data_consulta), 'MMM', { locale: ptBR })}
+                          {format(parseISO(c.data_consulta.replace(' ', 'T')), 'MMM', { locale: ptBR })}
                         </p>
                         <p style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary)', lineHeight: 1 }}>
-                          {format(parseISO(c.data_consulta), 'dd')}
+                          {format(parseISO(c.data_consulta.replace(' ', 'T')), 'dd')}
                         </p>
                         <p style={{ fontSize: '0.75rem', color: 'var(--primary)' }}>
-                          {format(parseISO(c.data_consulta), 'yyyy')}
+                          {format(parseISO(c.data_consulta.replace(' ', 'T')), 'yyyy')}
                         </p>
                       </div>
                       <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
@@ -714,7 +728,7 @@ const PatientDetails: React.FC = () => {
                       {c.proximo_retorno && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#ecfdf5', padding: '10px 14px', borderRadius: '8px', color: 'var(--primary)', fontSize: '0.9rem', fontWeight: 500 }}>
                           <Calendar size={15} />
-                          Próximo retorno: {format(parseISO(c.proximo_retorno), "dd 'de' MMMM, yyyy", { locale: ptBR })}
+                          Próximo retorno: {format(parseISO(c.proximo_retorno.replace(' ', 'T')), c.proximo_retorno.length > 10 ? "dd 'de' MMMM, yyyy 'às' HH:mm" : "dd 'de' MMMM, yyyy", { locale: ptBR })}
                         </div>
                       )}
                       {!c.observacoes && !c.proximo_retorno && (
@@ -730,66 +744,21 @@ const PatientDetails: React.FC = () => {
       </div>
 
       {/* ── Seção 3: Planos Alimentares ── */}
-      <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
-        <div style={{ padding: '24px 28px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={sectionTitleStyle}>
-            <span style={sectionIconStyle}><Utensils size={20} color="var(--primary)" /></span>
-            Planos Alimentares
-          </h2>
-          <button
-            className="btn-primary"
-            style={{ width: 'auto', opacity: 0.7, cursor: 'not-allowed' }}
-            disabled
-            title="Em breve: geração automática de planos"
-          >
-            <Plus size={16} /> Gerar Plano Alimentar
-          </button>
-        </div>
-
-        <div style={{ padding: '28px' }}>
-          {planosLoading ? (
-            <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>Carregando planos...</p>
-          ) : planos.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 20px', backgroundColor: '#fafafa', borderRadius: '12px', border: '1px dashed var(--border-color)' }}>
-              <Utensils size={40} style={{ opacity: 0.25, margin: '0 auto 12px', color: 'var(--accent-gold)', display: 'block' }} />
-              <p style={{ fontWeight: 600, color: 'var(--text-dark)', marginBottom: '4px' }}>Nenhum plano alimentar gerado ainda</p>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Em breve será possível gerar planos automaticamente com IA.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {planos.map(p => (
-                <div key={p.id} className="plano-card" style={{ border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden', transition: 'border-color 0.2s' }}>
-                  <button
-                    onClick={() => setExpandedPlano(expandedPlano === p.id ? null : p.id)}
-                    style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: 'none', textAlign: 'left' }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div style={{ backgroundColor: 'rgba(197,160,89,0.1)', padding: '10px', borderRadius: '8px' }}>
-                        <FileText size={18} color="var(--accent-gold)" />
-                      </div>
-                      <div>
-                        <p style={{ fontWeight: 600, color: 'var(--text-dark)', marginBottom: '2px' }}>{p.titulo || 'Plano sem título'}</p>
-                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          {p.created_at ? format(parseISO(p.created_at), "dd 'de' MMMM, yyyy", { locale: ptBR }) : ''}
-                        </p>
-                      </div>
-                    </div>
-                    {expandedPlano === p.id ? <ChevronUp size={18} color="var(--text-muted)" /> : <ChevronDown size={18} color="var(--text-muted)" />}
-                  </button>
-                  {expandedPlano === p.id && (
-                    <div style={{ borderTop: '1px solid var(--border-color)', padding: '20px', backgroundColor: '#fafafa' }}>
-                      {p.descricao && <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '12px', fontStyle: 'italic' }}>{p.descricao}</p>}
-                      <div style={{ whiteSpace: 'pre-wrap', color: 'var(--text-dark)', fontSize: '0.95rem', lineHeight: 1.7 }}>
-                        {p.conteudo || 'Sem conteúdo registrado.'}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+      <MealPlanManager
+        pacienteId={id!}
+        pacienteDados={{
+          nome,
+          objetivos: [...objetivos, objetivoOutro].filter(Boolean),
+          objetivo_texto: objetivos[0] || objetivoOutro || undefined,
+          nivel_atividade: nivelAtividade || undefined,
+          patologias: [...patologias, patologiasOutro].filter(Boolean),
+          restricoes_alimentares: [...restricoes, restricoesOutro].filter(Boolean),
+          alergias: [...alergias, alergiasOutro].filter(Boolean),
+          peso_inicial: pesoNum && !isNaN(pesoNum) ? pesoNum : undefined,
+          altura: alturaNum && !isNaN(alturaNum) ? alturaNum : undefined,
+          observacoes: observacoes || undefined
+        }}
+      />
 
       {/* Modal de Nova Consulta */}
       <NovaConsultaModal
