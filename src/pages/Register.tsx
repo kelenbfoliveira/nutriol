@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Sparkles, CheckCircle } from 'lucide-react';
+import { Sparkles, CheckCircle, ArrowLeft } from 'lucide-react';
 
 const Register: React.FC = () => {
   const [nome, setNome] = useState('');
@@ -112,6 +112,10 @@ const Register: React.FC = () => {
           </div>
           
           <div className="auth-form-card" style={{ padding: '36px' }}>
+            <Link to="/" className="auth-back-link">
+              <ArrowLeft size={16} />
+              Voltar para o site
+            </Link>
             <h2 className="auth-title" style={{ textAlign: 'left', marginBottom: '8px' }}>Criar conta</h2>
             <p className="auth-subtitle" style={{ textAlign: 'left', marginBottom: '24px' }}>Comece a gerenciar seus pacientes de forma profissional.</p>
             

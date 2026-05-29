@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Sparkles, CheckCircle } from 'lucide-react';
+import { Sparkles, CheckCircle, ArrowLeft } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -99,6 +99,10 @@ const Login: React.FC = () => {
           </div>
           
           <div className="auth-form-card">
+            <Link to="/" className="auth-back-link">
+              <ArrowLeft size={16} />
+              Voltar para o site
+            </Link>
             <h2 className="auth-title" style={{ textAlign: 'left', marginBottom: '8px' }}>Bem-vindo de volta</h2>
             <p className="auth-subtitle" style={{ textAlign: 'left', marginBottom: '32px' }}>Acesse sua conta para gerenciar seus atendimentos.</p>
             

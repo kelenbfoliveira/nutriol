@@ -107,19 +107,49 @@ input:focus {
 .app-layout {
   display: flex;
   min-height: 100vh;
+  background-color: var(--bg-color);
+  position: relative;
+  overflow-x: hidden;
+}
+
+.app-layout::before,
+.app-layout::after {
+  content: '';
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  filter: blur(140px);
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+.app-layout::before {
+  background: radial-gradient(circle, rgba(253, 210, 218, 0.4) 0%, rgba(253, 242, 244, 0) 70%);
+  top: -100px;
+  right: -100px;
+}
+
+.app-layout::after {
+  background: radial-gradient(circle, rgba(24, 63, 46, 0.05) 0%, rgba(253, 250, 249, 0) 70%);
+  bottom: -100px;
+  left: 200px;
 }
 
 .main-content {
   flex: 1;
-  padding: 32px 48px;
+  padding: 28px 48px;
   margin-left: 280px; /* Width of sidebar */
+  position: relative;
+  z-index: 1;
 }
 
-/* Sidebar Styles */
+/* Sidebar Styles (Dark Forest Green Variant) */
 .sidebar {
   width: 280px;
-  background-color: var(--sidebar-bg);
-  border-right: 1px solid var(--border-color);
+  background-color: #112d21; /* Deep forest green */
+  border-right: 1px solid rgba(197, 160, 89, 0.15);
   height: 100vh;
   position: fixed;
   left: 0;
@@ -128,10 +158,33 @@ input:focus {
   flex-direction: column;
   padding: 24px 0;
   z-index: 10;
+  overflow: hidden;
+}
+
+.sidebar::before {
+  content: '';
+  position: absolute;
+  bottom: -40px;
+  left: -40px;
+  width: 180px;
+  height: 180px;
+  background-image: url('/favicon.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: 0.05; /* Mais visível no fundo escuro */
+  filter: brightness(0) invert(1) opacity(0.3); /* Favicon em branco sutil */
+  pointer-events: none;
+  z-index: 0;
 }
 
 .sidebar-header {
   padding: 0 24px 32px;
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar-header .logo-text {
+  color: var(--white) !important;
 }
 
 .nav-list {
@@ -140,6 +193,8 @@ input:focus {
   flex-direction: column;
   gap: 8px;
   padding: 0 16px;
+  position: relative;
+  z-index: 1;
 }
 
 .nav-item {
@@ -148,29 +203,37 @@ input:focus {
   gap: 12px;
   padding: 12px 16px;
   border-radius: 8px;
-  color: var(--text-muted);
+  border-left: 3px solid transparent;
+  color: rgba(255, 255, 255, 0.65);
   text-decoration: none;
   font-weight: 500;
   transition: var(--transition);
 }
 
+.nav-item svg {
+  color: rgba(255, 255, 255, 0.4);
+  transition: var(--transition);
+}
+
 .nav-item:hover {
-  background-color: #f3f4f6;
-  color: var(--text-dark);
+  background-color: rgba(255, 255, 255, 0.06);
+  color: var(--white);
+  border-left-color: rgba(197, 160, 89, 0.4);
+}
+
+.nav-item:hover svg {
+  color: var(--accent-gold-light);
 }
 
 .nav-item.active {
-  background-color: #fdf2f4;
-  color: var(--primary);
+  background-color: rgba(197, 160, 89, 0.12); /* Tom de ouro sutil */
+  color: var(--accent-gold-light);
+  border-left-color: var(--accent-gold);
+  font-weight: 600;
 }
 
 .nav-item.active svg {
-  color: var(--primary);
-}
-
-.nav-item svg {
-  width: 20px;
-  height: 20px;
+  color: var(--accent-gold-light);
 }
 
 /* Card Styles */
@@ -227,16 +290,16 @@ input:focus {
 }
 
 .page-title {
-  font-size: 1.875rem;
+  font-size: 1.6rem;
   font-weight: 700;
   color: var(--text-dark);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .page-subtitle {
   color: var(--text-muted);
-  font-size: 1rem;
-  margin-bottom: 32px;
+  font-size: 0.9rem;
+  margin-bottom: 20px;
 }
 
 /* Buttons */
@@ -456,6 +519,23 @@ input:focus {
   .auth-form-logo-mobile {
     display: flex;
   }
+}
+
+.auth-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+  margin-bottom: 24px;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.auth-back-link:hover {
+  color: var(--primary);
+  transform: translateX(-4px);
 }
 
 /* Landing Page Styles */
@@ -765,12 +845,20 @@ input:focus {
 
 .landing-hero-image {
   width: 100%;
+  height: 480px; /* Altura fixa ideal no desktop para proporção perfeita */
+  object-fit: cover;
+  object-position: center 20%; /* Evita cortar o rosto ou partes essenciais */
   border-radius: 24px;
   box-shadow: 0 25px 50px -12px rgba(24, 63, 46, 0.15);
   border: 1px solid rgba(197, 160, 89, 0.25);
   display: block;
-  object-fit: cover;
   transition: var(--transition);
+}
+
+@media (max-width: 968px) {
+  .landing-hero-image {
+    height: 320px; /* Altura ajustada proporcionalmente para mobile */
+  }
 }
 
 .landing-hero-image:hover {
@@ -876,8 +964,8 @@ input:focus {
 
 /* Stats panel */
 .landing-stats-section {
-  padding: 60px 5%;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  padding: 24px 5%; /* Faixa verde compacta e minimalista */
+  background: var(--primary); /* Verde sólido sutil */
   color: var(--white);
 }
 
@@ -885,26 +973,36 @@ input:focus {
   display: flex;
   justify-content: space-around;
   flex-wrap: wrap;
-  gap: 40px;
-  max-width: 1200px;
+  gap: 24px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
 .stat-item {
   text-align: center;
-  min-width: 200px;
+  min-width: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px; /* Layout horizontal minimalista */
+}
+
+@media (max-width: 768px) {
+  .stat-item {
+    flex-direction: column;
+    gap: 4px;
+  }
 }
 
 .stat-number {
-  font-size: 3rem;
+  font-size: 2rem; /* Números menores e mais limpos */
   font-weight: 800;
   color: var(--accent-gold-light);
   line-height: 1;
-  margin-bottom: 8px;
 }
 
 .stat-label {
-  font-size: 1rem;
+  font-size: 0.9rem; /* Textos de legenda minimalistas */
   opacity: 0.85;
   font-weight: 500;
 }
@@ -1438,10 +1536,49 @@ input:focus {
   height: 280px;
 }
 
+/* Delicate brand watermark seal at the top-right corner of each image */
+.mosaic-item::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 32px;
+  height: 32px;
+  background-image: url('/favicon.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: 0.2; /* Clareado como marca d'água, mais visível */
+  z-index: 3;
+  pointer-events: none;
+  transition: var(--transition);
+}
+
+/* Elegant bottom gradient overlay for readability and depth */
+.mosaic-item::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(24, 63, 46, 0.35) 0%, rgba(24, 63, 46, 0) 50%);
+  opacity: 0.8;
+  z-index: 2;
+  pointer-events: none;
+  transition: var(--transition);
+}
+
 .mosaic-item:hover {
   transform: translateY(-8px);
   box-shadow: var(--shadow-lg);
   border-color: rgba(197, 160, 89, 0.4);
+}
+
+.mosaic-item:hover::before {
+  opacity: 0.38; /* Aumenta ligeiramente no hover */
+  transform: scale(1.08) rotate(5deg);
+}
+
+.mosaic-item:hover::after {
+  opacity: 0.95;
+  background: linear-gradient(to top, rgba(24, 63, 46, 0.5) 0%, rgba(24, 63, 46, 0.02) 60%);
 }
 
 .mosaic-item img {
@@ -1455,15 +1592,36 @@ input:focus {
   transform: scale(1.05);
 }
 
+/* Specific object-position adjustments to fix aspect ratio/cropping issues */
+.item-nutritionist img {
+  object-position: center 25%;
+}
+
+.item-dashboard img {
+  object-position: left top; /* Mostra o topo e a lateral do painel de gráficos sem cortar */
+}
+
+.item-lifestyle img {
+  object-position: center;
+}
+
+.item-mealprep img {
+  object-position: center top; /* Mostra o cabeçalho e detalhes do plano alimentar */
+}
+
+.item-fruits img {
+  object-position: center;
+}
+
 /* Colspan assignments */
 .item-nutritionist {
   grid-column: span 7;
-  height: 380px;
+  height: 320px; /* Alinhado no mesmo formato/altura das demais */
 }
 
 .item-dashboard {
   grid-column: span 5;
-  height: 380px;
+  height: 320px; /* Alinhado no mesmo formato/altura das demais */
 }
 
 .item-lifestyle {
@@ -1497,7 +1655,8 @@ input:focus {
   position: absolute;
   bottom: 20px;
   left: 20px;
-  right: 20px;
+  width: calc(100% - 40px);
+  max-width: 360px; /* Limita a largura para manter a proporção elegante em fotos grandes */
   background: rgba(253, 250, 249, 0.88);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(197, 160, 89, 0.2);
@@ -1510,6 +1669,7 @@ input:focus {
   opacity: 0;
   transition: var(--transition);
   box-shadow: 0 8px 24px rgba(24, 63, 46, 0.08);
+  z-index: 4; /* Fica acima dos efeitos overlay e marca d'água */
 }
 
 .mosaic-item:hover .mosaic-tag {
@@ -1536,7 +1696,12 @@ input:focus {
 .mosaic-tag-logo {
   width: 24px;
   height: 24px;
-  opacity: 0.9;
+  opacity: 0.35; /* Clareado mantendo as cores originais da marca */
+  transition: var(--transition);
+}
+
+.mosaic-item:hover .mosaic-tag-logo {
+  opacity: 0.7; /* Mais visível no hover */
 }
 
 /* Pulsing logo effect for header and CTAs */
@@ -1550,5 +1715,321 @@ input:focus {
   border: 1.5px solid rgba(197, 160, 89, 0.35);
   box-shadow: 0 4px 15px rgba(197, 160, 89, 0.15);
   animation: pulse-logo 4s infinite ease-in-out;
+}
+
+/* ==========================================================================
+   Premium Platform Refactoring - CSS Tokens & Helper Classes
+   ========================================================================== */
+
+/* Circular Monogram Avatars for Patients list */
+.avatar-monogram {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--white);
+  text-transform: uppercase;
+  box-shadow: 0 4px 10px rgba(24, 63, 46, 0.05);
+  flex-shrink: 0;
+}
+
+.avatar-color-0 { background: linear-gradient(135deg, var(--primary), var(--primary-light)); }
+.avatar-color-1 { background: linear-gradient(135deg, var(--secondary), #b57a87); }
+.avatar-color-2 { background: linear-gradient(135deg, var(--accent-gold), var(--accent-gold-light)); }
+.avatar-color-3 { background: linear-gradient(135deg, #4b6b5c, #6c8d7d); }
+.avatar-color-4 { background: linear-gradient(135deg, #a67c85, #cfa8b1); }
+
+/* Dashboard Profile Header Panel with subtle logo watermark background */
+.dashboard-profile-header {
+  position: relative;
+  background: linear-gradient(135deg, #183f2e 0%, #112d21 100%);
+  color: var(--white);
+  padding: 24px 32px;
+  border-radius: 20px;
+  margin-bottom: 24px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(197, 160, 89, 0.15);
+}
+
+.dashboard-profile-header::before {
+  content: '';
+  position: absolute;
+  right: -30px;
+  bottom: -30px;
+  width: 220px;
+  height: 220px;
+  background-image: url('/favicon.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: 0.04; /* Marca d'água elegante no header */
+  pointer-events: none;
+}
+
+/* Agenda Appointment Ticket Card */
+.appointment-ticket {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 20px;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background-color: var(--white);
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+}
+
+.appointment-ticket::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--accent-gold);
+  border-radius: 4px 0 0 4px;
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.appointment-ticket:hover {
+  transform: translateX(4px);
+  border-color: rgba(197, 160, 89, 0.35);
+  box-shadow: var(--shadow);
+}
+
+.appointment-ticket:hover::before {
+  opacity: 1;
+}
+
+.ticket-date-box {
+  background-color: #faf9f6;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px dashed rgba(197, 160, 89, 0.3);
+  text-align: center;
+  min-width: 76px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.01);
+}
+
+/* Glassmorphic internal card with subtle brand watermark background */
+.glass-card {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(197, 160, 89, 0.12);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.glass-card::before {
+  content: '';
+  position: absolute;
+  right: -30px;
+  bottom: -30px;
+  width: 120px;
+  height: 120px;
+  background-image: url('/favicon.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: 0.02; /* Marca d'água sutil nos cards de conteúdo */
+  pointer-events: none;
+}
+
+.glass-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(197, 160, 89, 0.35);
+}
+
+/* Custom styles for tables, filters and actions */
+.premium-table {
+  border-collapse: separate !important;
+  border-spacing: 0 12px !important;
+  width: 100%;
+  text-align: left;
+}
+
+.premium-table thead tr {
+  background-color: transparent !important;
+  border: none !important;
+}
+
+.premium-table th {
+  padding: 12px 24px !important;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  border: none !important;
+}
+
+.premium-table tbody tr {
+  background-color: var(--white);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.premium-table tbody tr:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+  background-color: var(--white) !important;
+}
+
+.premium-table td {
+  padding: 18px 24px !important;
+  border-top: 1px solid var(--border-color) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  background-color: var(--white);
+  color: var(--text-dark);
+  transition: var(--transition);
+}
+
+.premium-table td:first-child {
+  border-left: 1px solid var(--border-color) !important;
+  border-top-left-radius: 16px !important;
+  border-bottom-left-radius: 16px !important;
+}
+
+.premium-table td:last-child {
+  border-right: 1px solid var(--border-color) !important;
+  border-top-right-radius: 16px !important;
+  border-bottom-right-radius: 16px !important;
+}
+
+.premium-table tr:hover td {
+  border-color: rgba(197, 160, 89, 0.35) !important;
+}
+
+.premium-badge-goal {
+  background-color: rgba(26, 79, 54, 0.08);
+  color: var(--primary);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid rgba(26, 79, 54, 0.15);
+  display: inline-block;
+}
+
+/* ==========================================================================
+   Patient Profiles & CRM Layout - Design Elevado
+   ========================================================================== */
+
+.patient-avatar-container {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1.5px solid rgba(197, 160, 89, 0.25);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+  background: var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.patient-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.patient-avatar-large {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2.5px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 8px 24px rgba(24, 63, 46, 0.12);
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.patient-profile-banner {
+  background: linear-gradient(135deg, #183f2e 0%, #112d21 100%);
+  color: var(--white);
+  padding: 20px 28px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(197, 160, 89, 0.15);
+  box-shadow: var(--shadow);
+}
+
+.patient-profile-banner::before {
+  content: '';
+  position: absolute;
+  right: -30px;
+  bottom: -30px;
+  width: 200px;
+  height: 200px;
+  background-image: url('/favicon.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: 0.035;
+  pointer-events: none;
+}
+
+.patient-banner-metric {
+  background-color: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px 18px;
+  border-radius: 14px;
+  text-align: center;
+  min-width: 90px;
+}
+
+.premium-tabs {
+  display: flex;
+  background-color: #faf9f6;
+  border-radius: 12px;
+  padding: 4px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 16px;
+}
+
+.premium-tab-btn {
+  flex: 1;
+  padding: 9px 16px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-muted);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.premium-tab-btn.active {
+  background-color: var(--white);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.premium-tab-btn:hover:not(.active) {
+  color: var(--primary);
+  background-color: rgba(24, 63, 46, 0.02);
 }
 

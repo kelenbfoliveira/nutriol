@@ -6,7 +6,6 @@ import {
   Users, 
   Calendar, 
   Apple, 
-  Settings, 
   LogOut 
 } from 'lucide-react';
 
@@ -21,7 +20,8 @@ const Sidebar: React.FC = () => {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <h1 className="logo-text" style={{ textAlign: 'center', marginTop: '12px' }}>
+        <h1 className="logo-text" style={{ textAlign: 'center', marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          <img src="/favicon.svg" alt="NutriOl Logo" style={{ width: '28px', height: '28px' }} />
           Nutri<span>Ol</span>
         </h1>
       </div>
@@ -57,12 +57,6 @@ const Sidebar: React.FC = () => {
 
       <div style={{ padding: '0 16px', marginTop: 'auto' }}>
         <ul className="nav-list">
-          <li>
-            <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-              <Settings />
-              Configurações
-            </NavLink>
-          </li>
           <li>
             <button onClick={handleLogout} className="nav-item" style={{ width: '100%', textAlign: 'left', background: 'none' }}>
               <LogOut />

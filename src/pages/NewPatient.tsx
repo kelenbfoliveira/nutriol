@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Check, Save } from 'lucide-react';
+import { ArrowLeft, Check, Save, Camera } from 'lucide-react';
+import { formatPhoneNumber } from '../lib/utils';
 
 const OBJECTIVES = ['Emagrecer', 'Ganhar massa', 'Controlar diabetes', 'Saúde geral', 'Performance esportiva', 'Reeducação alimentar'];
 const ACTIVITY_LEVELS = ['Sedentário', 'Levemente ativo', 'Moderadamente ativo', 'Muito ativo', 'Extremamente ativo'];
@@ -24,6 +25,7 @@ const NewPatient: React.FC = () => {
   const [telefone, setTelefone] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [email, setEmail] = useState('');
+  const [fotoUrl, setFotoUrl] = useState('');
 
   // Tab 2: Clínico
   const [peso, setPeso] = useState('');
@@ -65,6 +67,22 @@ const NewPatient: React.FC = () => {
     }
   }, [dataNascimento]);
 
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('A foto deve ter no máximo 2MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFotoUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   useEffect(() => {
     if (!id) return;
 
@@ -83,8 +101,9 @@ const NewPatient: React.FC = () => {
           setNome(data.nome || '');
           setDataNascimento(data.data_nascimento || '');
           setSexo(data.sexo || '');
-          setWhatsapp(data.whatsapp || '');
+          setWhatsapp(formatPhoneNumber(data.whatsapp || ''));
           setEmail(data.email || '');
+          setFotoUrl(data.foto_url || '');
           
           setPeso(data.peso_inicial ? data.peso_inicial.toString() : '');
           setAltura(data.altura ? data.altura.toString() : '');
@@ -209,6 +228,7 @@ const NewPatient: React.FC = () => {
             sexo: sexo || null,
             whatsapp: whatsapp || null,
             email: email || null,
+            foto_url: fotoUrl || null,
             peso_inicial: (pesoNum && !isNaN(pesoNum)) ? pesoNum : null,
             altura: (alturaNum && !isNaN(alturaNum)) ? alturaNum : null,
             objetivos: [...objetivos, objetivoOutro].filter(Boolean),
@@ -237,6 +257,7 @@ const NewPatient: React.FC = () => {
             sexo: sexo || null,
             whatsapp: whatsapp || null,
             email: email || null,
+            foto_url: fotoUrl || null,
             peso_inicial: (pesoNum && !isNaN(pesoNum)) ? pesoNum : null,
             altura: (alturaNum && !isNaN(alturaNum)) ? alturaNum : null,
             objetivos: [...objetivos, objetivoOutro].filter(Boolean),
@@ -318,6 +339,32 @@ const NewPatient: React.FC = () => {
           {/* TAB 1: PESSOAL */}
           {activeTab === 'pessoal' && (
             <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '8px' }}>
+                <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden', border: '2px dashed var(--primary-light)', cursor: 'pointer' }} onClick={() => document.getElementById('new-photo-upload')?.click()}>
+                  {fotoUrl ? (
+                    <img src={fotoUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <Camera size={24} color="var(--primary)" />
+                  )}
+                  <input
+                    type="file"
+                    id="new-photo-upload"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handlePhotoChange}
+                  />
+                </div>
+                <div>
+                  <p style={{ fontWeight: 600, color: 'var(--text-dark)', fontSize: '0.95rem', margin: '0 0 4px 0' }}>Foto do Paciente</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: 0 }}>Clique para carregar uma imagem (Máx: 2MB)</p>
+                  {fotoUrl && (
+                    <button type="button" onClick={() => setFotoUrl('')} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', padding: 0, marginTop: '4px', cursor: 'pointer', fontWeight: 500 }}>
+                      Remover foto
+                    </button>
+                  )}
+                </div>
+              </div>
+
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Nome Completo *</label>
                 <input type="text" required value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Maria da Silva" />
@@ -346,11 +393,11 @@ const NewPatient: React.FC = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">WhatsApp</label>
-                  <input type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="(00) 00000-0000" />
+                  <input type="tel" value={whatsapp} onChange={(e) => setWhatsapp(formatPhoneNumber(e.target.value))} placeholder="(00) 00000-0000" />
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Telefone Alternativo</label>
-                  <input type="tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(00) 0000-0000" />
+                  <input type="tel" value={telefone} onChange={(e) => setTelefone(formatPhoneNumber(e.target.value))} placeholder="(00) 0000-0000" />
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Email</label>

@@ -8,6 +8,7 @@ import PatientDetails from './pages/PatientDetails';
 import NewPatient from './pages/NewPatient';
 import Appointments from './pages/Appointments';
 import MealPlans from './pages/MealPlans';
+import ConfirmAppointment from './pages/ConfirmAppointment';
 import Layout from './components/Layout';
 import './index.css';
 
@@ -18,6 +19,7 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/confirmar" element={<ConfirmAppointment />} />
         
         {/* Protected Routes Wrapper */}
         <Route element={<Layout />}>

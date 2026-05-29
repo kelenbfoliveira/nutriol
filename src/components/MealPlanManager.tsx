@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../lib/supabase';
 import { 
   Apple, 
@@ -12,7 +13,8 @@ import {
   X, 
   Check,
   AlertTriangle,
-  ArrowLeft
+  ArrowLeft,
+  Printer
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -27,6 +29,9 @@ export interface DayMeals {
 }
 
 export interface MealPlanContent {
+  config?: {
+    numRefeicoes?: 3 | 4 | 5;
+  };
   dias: {
     segunda: DayMeals;
     terca: DayMeals;
@@ -85,6 +90,32 @@ const MEALS_CONFIG = [
   { key: 'jantar', label: '🌙 Jantar' }
 ] as const;
 
+// Helper to get active meals based on number of meals
+const getActiveMeals = (num: number) => {
+  if (num === 3) {
+    return [
+      { key: 'cafe_manha', label: '☀️ Café da Manhã' },
+      { key: 'almoco', label: '🍲 Almoço' },
+      { key: 'jantar', label: '🌙 Jantar' }
+    ] as const;
+  }
+  if (num === 4) {
+    return [
+      { key: 'cafe_manha', label: '☀️ Café da Manhã' },
+      { key: 'almoco', label: '🍲 Almoço' },
+      { key: 'lanche_tarde', label: '☕ Lanche da Tarde' },
+      { key: 'jantar', label: '🌙 Jantar' }
+    ] as const;
+  }
+  return [
+    { key: 'cafe_manha', label: '☀️ Café da Manhã' },
+    { key: 'lanche_manha', label: '🍏 Lanche da Manhã' },
+    { key: 'almoco', label: '🍲 Almoço' },
+    { key: 'lanche_tarde', label: '☕ Lanche da Tarde' },
+    { key: 'jantar', label: '🌙 Jantar' }
+  ] as const;
+};
+
 // Default empty plan creator
 const createEmptyPlan = (): MealPlanContent => {
   const emptyDay = (): DayMeals => ({
@@ -123,6 +154,14 @@ export const MealPlanManager: React.FC<MealPlanManagerProps> = ({ pacienteId, pa
   const [conteudo, setConteudo] = useState<MealPlanContent>(createEmptyPlan());
   const [activeDay, setActiveDay] = useState<keyof MealPlanContent['dias']>('segunda');
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
+  const [numRefeicoes, setNumRefeicoes] = useState<3 | 4 | 5>(5);
+
+  // ── Impressão State ──
+  const [printPlan, setPrintPlan] = useState<MealPlan | null>(null);
+
+  const handlePrintPlan = (plan: MealPlan) => {
+    setPrintPlan(plan);
+  };
 
   // Status States
   const [loading, setLoading] = useState(true);
@@ -264,7 +303,7 @@ export const MealPlanManager: React.FC<MealPlanManagerProps> = ({ pacienteId, pa
       // If deployed, it uses supabase.functions.invoke.
       // We will first try to invoke it, and if it fails or returns 404, we will fall back to calling the Vercel serverless function or REST endpoint
       const { data, error } = await supabase.functions.invoke('gerar-plano', {
-        body: { dados_do_paciente: dadosPacientePrompt }
+        body: { dados_do_paciente: dadosPacientePrompt, num_refeicoes: numRefeicoes }
       });
 
       let responseJSON: any = null;
@@ -278,7 +317,7 @@ export const MealPlanManager: React.FC<MealPlanManagerProps> = ({ pacienteId, pa
         const response = await fetch('/api/gerar-plano', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ dados_do_paciente: dadosPacientePrompt })
+          body: JSON.stringify({ dados_do_paciente: dadosPacientePrompt, num_refeicoes: numRefeicoes })
         });
 
         if (!response.ok) {
@@ -292,6 +331,7 @@ export const MealPlanManager: React.FC<MealPlanManagerProps> = ({ pacienteId, pa
       }
 
       const parsedPlan = parseAIPlan(responseJSON);
+      parsedPlan.config = { numRefeicoes };
       
       // Set Form State
       setTitulo(`Plano Gerado por IA - ${format(new Date(), 'dd/MM/yyyy')}`);
@@ -344,6 +384,9 @@ export const MealPlanManager: React.FC<MealPlanManagerProps> = ({ pacienteId, pa
       parsedContent = createEmptyPlan();
     }
 
+    const savedNumRefeicoes = parsedContent.config?.numRefeicoes || 5;
+    setNumRefeicoes(savedNumRefeicoes as 3 | 4 | 5);
+
     // Ensure all days and meals are structural padded to 5 elements
     const verifiedContent = createEmptyPlan();
     DAYS_CONFIG.forEach(d => {
@@ -395,6 +438,11 @@ export const MealPlanManager: React.FC<MealPlanManagerProps> = ({ pacienteId, pa
     setSaving(true);
     setErrorMessage(null);
     try {
+      const payload: MealPlanContent = {
+        config: { numRefeicoes },
+        dias: conteudo.dias
+      };
+
       if (editorAction === 'create') {
         const { error } = await supabase
           .from('planos_alimentares')
@@ -403,7 +451,7 @@ export const MealPlanManager: React.FC<MealPlanManagerProps> = ({ pacienteId, pa
               paciente_id: pacienteId,
               titulo: titulo.trim(),
               descricao: descricao.trim(),
-              conteudo: conteudo
+              conteudo: payload
             }
           ]);
         if (error) throw error;
@@ -414,7 +462,7 @@ export const MealPlanManager: React.FC<MealPlanManagerProps> = ({ pacienteId, pa
           .update({
             titulo: titulo.trim(),
             descricao: descricao.trim(),
-            conteudo: conteudo
+            conteudo: payload
           })
           .eq('id', selectedPlanId!);
         if (error) throw error;
@@ -500,7 +548,33 @@ export const MealPlanManager: React.FC<MealPlanManagerProps> = ({ pacienteId, pa
         </h2>
 
         {mode === 'list' ? (
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px' }}>
+              <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-muted)' }}>Refeições:</span>
+              <div style={{ display: 'inline-flex', gap: '4px', backgroundColor: '#faf9f6', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                {[3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setNumRefeicoes(n as 3 | 4 | 5)}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: '6px',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      border: 'none',
+                      backgroundColor: numRefeicoes === n ? 'var(--primary)' : 'transparent',
+                      color: numRefeicoes === n ? 'var(--white)' : 'var(--text-muted)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
             <button 
               className="btn-outline" 
               onClick={handleNewManual}
@@ -589,6 +663,13 @@ export const MealPlanManager: React.FC<MealPlanManagerProps> = ({ pacienteId, pa
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         <button 
                           className="btn-outline" 
+                          onClick={(e) => { e.stopPropagation(); handlePrintPlan(plan); }}
+                          style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <Printer size={14} /> Imprimir
+                        </button>
+                        <button 
+                          className="btn-outline" 
                           onClick={(e) => { e.stopPropagation(); handleEditPlan(plan); }}
                           style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
                         >
@@ -622,7 +703,9 @@ export const MealPlanManager: React.FC<MealPlanManagerProps> = ({ pacienteId, pa
                               if (!dayData) return null;
 
                               // Check if day has any items to display
-                              const hasMeals = MEALS_CONFIG.some(m => dayData[m.key]?.some(item => item.trim()));
+                              const planNumRefeicoes = parsedContent?.config?.numRefeicoes || 5;
+                              const activeMeals = getActiveMeals(planNumRefeicoes);
+                              const hasMeals = activeMeals.some(m => dayData[m.key]?.some(item => item.trim()));
                               if (!hasMeals) return null;
 
                               return (
@@ -632,7 +715,7 @@ export const MealPlanManager: React.FC<MealPlanManagerProps> = ({ pacienteId, pa
                                   </h5>
 
                                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-                                    {MEALS_CONFIG.map(mealInfo => {
+                                    {activeMeals.map(mealInfo => {
                                       const mealOptions = dayData[mealInfo.key] || [];
                                       const filledOptions = mealOptions.filter(opt => opt.trim());
                                       if (filledOptions.length === 0) return null;
@@ -699,7 +782,35 @@ export const MealPlanManager: React.FC<MealPlanManagerProps> = ({ pacienteId, pa
           </div>
 
           <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
-            <p style={{ fontWeight: 700, color: 'var(--primary)', marginBottom: '14px', fontSize: '1rem' }}>Cardápio Semanal Estruturado</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '12px' }}>
+              <p style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '1rem', margin: 0 }}>Cardápio Semanal Estruturado</p>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-muted)' }}>Número de refeições diárias:</span>
+                <div style={{ display: 'inline-flex', gap: '4px', backgroundColor: '#faf9f6', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  {[3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setNumRefeicoes(n as 3 | 4 | 5)}
+                      style={{
+                        padding: '4px 12px',
+                        borderRadius: '6px',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        border: 'none',
+                        backgroundColor: numRefeicoes === n ? 'var(--primary)' : 'transparent',
+                        color: numRefeicoes === n ? 'var(--white)' : 'var(--text-muted)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
 
             {/* Days Horizontal Tab navigation */}
             <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '10px', marginBottom: '24px', borderBottom: '1px solid var(--border-color)' }}>
@@ -731,7 +842,7 @@ export const MealPlanManager: React.FC<MealPlanManagerProps> = ({ pacienteId, pa
 
             {/* Meals layout for the active day */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {MEALS_CONFIG.map(mealInfo => {
+              {getActiveMeals(numRefeicoes).map(mealInfo => {
                 const mealOptions = conteudo.dias[activeDay][mealInfo.key] || ['', '', '', '', ''];
                 
                 return (
@@ -797,6 +908,130 @@ export const MealPlanManager: React.FC<MealPlanManagerProps> = ({ pacienteId, pa
           </div>
 
         </div>
+      )}
+
+      {printPlan && createPortal(
+        <div className="print-overlay" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', zIndex: 2000, backdropFilter: 'blur(4px)', padding: '20px', overflowY: 'auto' }}>
+          <div id="print-content" style={{ width: '100%', maxWidth: '720px', backgroundColor: '#fff', borderRadius: '12px', padding: '40px', position: 'relative', boxShadow: '0 25px 50px rgba(0,0,0,0.3)' }}>
+            
+            {/* Controles fora da área de impressão */}
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '2px solid var(--border-color)' }}>
+              <h3 style={{ color: 'var(--text-dark)', fontWeight: 700, fontSize: '1.1rem' }}>
+                Imprimir Plano Alimentar
+              </h3>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn-primary" style={{ width: 'auto', padding: '8px 16px', gap: '6px' }} onClick={() => window.print()}>
+                  <Printer size={14} /> Imprimir
+                </button>
+                <button className="btn-outline" style={{ padding: '8px 12px' }} onClick={() => setPrintPlan(null)}>
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Cabeçalho do documento */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <img src="/favicon.svg" alt="NutriOl" style={{ width: '36px', height: '36px' }} />
+                <div>
+                  <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--primary)', margin: 0 }}>NutriOl</h2>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>Sistema de Gestão Nutricional</p>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>PLANO ALIMENTAR</p>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>Emissão: {format(new Date(), "dd/MM/yyyy")}</p>
+              </div>
+            </div>
+
+            {/* Nome do paciente e título do plano */}
+            <div style={{ backgroundColor: 'var(--primary)', color: '#fff', borderRadius: '10px', padding: '16px 20px', marginBottom: '24px' }}>
+              <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Paciente</p>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 700, margin: '2px 0 4px' }}>{pacienteDados.nome}</h2>
+              <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 500, borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '6px', marginTop: '6px' }}>
+                {printPlan.titulo}
+              </p>
+            </div>
+
+            {printPlan.descricao && (
+              <div style={{ marginBottom: '24px', backgroundColor: '#faf9f6', padding: '16px', borderRadius: '8px', borderLeft: '4px solid var(--accent-gold)' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', margin: '0 0 4px 0' }}>Orientações Gerais</p>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-dark)', margin: 0, whiteSpace: 'pre-wrap' }}>{printPlan.descricao}</p>
+              </div>
+            )}
+
+            {/* Cardápio */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {(() => {
+                let parsedContent: MealPlanContent | null = null;
+                let legacyText = '';
+
+                if (typeof printPlan.conteudo === 'string') {
+                  try {
+                    parsedContent = JSON.parse(printPlan.conteudo);
+                  } catch {
+                    legacyText = printPlan.conteudo;
+                  }
+                } else if (printPlan.conteudo && typeof printPlan.conteudo === 'object') {
+                  parsedContent = printPlan.conteudo as any;
+                }
+
+                if (parsedContent && parsedContent.dias) {
+                  return DAYS_CONFIG.map(dayInfo => {
+                    const dayData = parsedContent?.dias?.[dayInfo.key];
+                    if (!dayData) return null;
+
+                    const planNumRefeicoes = parsedContent?.config?.numRefeicoes || 5;
+                    const activeMeals = getActiveMeals(planNumRefeicoes);
+                    const hasMeals = activeMeals.some(m => dayData[m.key]?.some(item => item.trim()));
+                    if (!hasMeals) return null;
+
+                    return (
+                      <div key={dayInfo.key} style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '16px', pageBreakInside: 'avoid' }}>
+                        <h4 style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '1.05rem', marginBottom: '12px', borderBottom: '1.5px solid rgba(197, 160, 89, 0.2)', paddingBottom: '6px', display: 'inline-block' }}>
+                          {dayInfo.fullLabel}
+                        </h4>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {activeMeals.map(mealInfo => {
+                            const mealOptions = dayData[mealInfo.key] || [];
+                            const filledOptions = mealOptions.filter(opt => opt.trim());
+                            if (filledOptions.length === 0) return null;
+
+                            return (
+                              <div key={mealInfo.key} style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: '12px', borderBottom: '1px solid #f3f4f6', paddingBottom: '8px' }}>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-dark)' }}>{mealInfo.label}</span>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                  {filledOptions.map((opt, i) => (
+                                    <p key={i} style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, display: 'flex', gap: '6px' }}>
+                                      {filledOptions.length > 1 && <span>•</span>}
+                                      <span>{opt}</span>
+                                    </p>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  });
+                } else {
+                  return (
+                    <div style={{ whiteSpace: 'pre-wrap', color: 'var(--text-dark)', fontSize: '0.92rem', lineHeight: 1.6, padding: '16px', backgroundColor: '#faf9f6', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      {legacyText || 'Sem conteúdo estruturado.'}
+                    </div>
+                  );
+                }
+              })()}
+            </div>
+
+            <div className="no-print" style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border-color)', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>NutriOl — Sistema de Gestão Nutricional • Documento gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm")}</p>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
     </div>

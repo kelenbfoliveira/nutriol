@@ -58,7 +58,7 @@ const Landing: React.FC = () => {
           ) : (
             <>
               <Link to="/login" className="landing-btn-login">Entrar</Link>
-              <Link to="/register" className="landing-btn-register">Solicitar Orçamento</Link>
+              <Link to="/register" className="landing-btn-register">Comece grátis</Link>
             </>
           )}
         </div>
@@ -87,7 +87,7 @@ const Landing: React.FC = () => {
             ) : (
               <>
                 <Link to="/register" className="landing-btn-hero-primary">
-                  Solicitar Orçamento
+                  Comece grátis
                 </Link>
                 <a href="#funcionalidades" className="landing-btn-hero-secondary">
                   Ver Funcionalidades
@@ -338,8 +338,8 @@ const Landing: React.FC = () => {
       <section className="landing-cta-section" id="sobre">
         <div className="landing-cta-content">
           <div style={{ display: 'inline-flex', justifyContent: 'center', marginBottom: '28px' }}>
-            <div className="pulsing-logo-container" style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.15)', borderColor: 'var(--accent-gold)' }}>
-              <img src="/favicon.svg" alt="NutriOl Logo" style={{ width: '48px', height: '48px', filter: 'brightness(0) invert(1) sepia(0.5) saturate(1.5)' }} />
+            <div className="pulsing-logo-container" style={{ padding: '12px', background: 'var(--white)', border: '2px solid var(--accent-gold)' }}>
+              <img src="/favicon.svg" alt="NutriOl Logo" style={{ width: '48px', height: '48px' }} />
             </div>
           </div>
           <h2>Pronta para elevar o nível dos seus atendimentos?</h2>
@@ -353,7 +353,7 @@ const Landing: React.FC = () => {
             </Link>
           ) : (
             <Link to="/register" className="landing-cta-btn">
-              Solicitar Orçamento
+              Comece grátis
             </Link>
           )}
         </div>
@@ -372,7 +372,7 @@ const Landing: React.FC = () => {
             <a href="#funcionalidades" className="footer-link">Funcionalidades</a>
             <a href="#beneficios" className="footer-link">Benefícios</a>
             <Link to="/login" className="footer-link">Login</Link>
-            <Link to="/register" className="footer-link">Solicitar Orçamento</Link>
+            <Link to="/register" className="footer-link">Comece grátis</Link>
           </div>
         </div>
         <div className="footer-bottom">
