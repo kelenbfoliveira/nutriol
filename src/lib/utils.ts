@@ -1,11 +1,58 @@
 import { parseISO, differenceInCalendarDays } from 'date-fns';
 
+export const parseLocalDateTime = (dateInput: Date | string): Date => {
+  if (dateInput instanceof Date) return dateInput;
+  if (!dateInput) return new Date();
+  
+  // Limpa sufixos de fuso horário como Z, +00:00, .000Z, etc.
+  // Mantém estritamente o tempo de parede local agendado
+  const cleanStr = dateInput
+    .replace(' ', 'T')
+    .split('.')[0]       // Remove milissegundos (.000)
+    .split('+')[0]       // Remove offset positivo (+03:00)
+    .replace(/Z$/i, ''); // Remove sufixo Z
+    
+  return parseISO(cleanStr);
+};
+
 export const isTomorrow = (dateStr: string): boolean => {
   try {
-    const apptDate = parseISO(dateStr.replace(' ', 'T'));
-    return differenceInCalendarDays(apptDate, new Date()) === 1;
+    const apptDate = parseLocalDateTime(dateStr);
+    const today = new Date();
+    
+    // Zera horas para comparação puramente baseada no dia do calendário
+    const target = new Date(apptDate);
+    target.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    
+    return differenceInCalendarDays(target, today) === 1;
   } catch {
     return false;
+  }
+};
+
+export const getBusinessDaysDifference = (startDate: Date | string, endDate: Date | string): number => {
+  try {
+    const start = parseLocalDateTime(startDate);
+    const end = parseLocalDateTime(endDate);
+    
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    
+    if (start > end) return -getBusinessDaysDifference(end, start);
+    
+    let diff = 0;
+    const current = new Date(start);
+    while (current < end) {
+      current.setDate(current.getDate() + 1);
+      const day = current.getDay();
+      if (day !== 0 && day !== 6) { // 0 = Sunday, 6 = Saturday
+        diff++;
+      }
+    }
+    return diff;
+  } catch {
+    return 0;
   }
 };
 

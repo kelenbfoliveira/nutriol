@@ -2033,3 +2033,217 @@ input:focus {
   background-color: rgba(24, 63, 46, 0.02);
 }
 
+/* ==========================================================================
+   Responsive Utilities & Layout Grids (Mobile-First)
+   ========================================================================== */
+
+.grid-2-cols {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.grid-3-cols {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.grid-4-cols {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.appointments-grid {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.appointments-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* WhatsApp Floating Automation Panel */
+.whatsapp-automation-fixed {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 900 !important;
+  transition: var(--transition);
+}
+
+.whatsapp-toast-fixed {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  background-color: #ecfdf5 !important;
+  border: 1px solid #10b981 !important;
+  color: #065f46 !important;
+  padding: 12px 20px !important;
+  border-radius: 12px !important;
+  z-index: 1000 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  box-shadow: var(--shadow-lg) !important;
+  animation: fadeIn 0.3s !important;
+}
+
+/* Mobile Media Queries (max-width: 768px) */
+@media (max-width: 768px) {
+  /* Layout modifications */
+  .app-layout {
+    flex-direction: column;
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+    padding: 16px 16px 88px 16px !important; /* bottom padding to accommodate bottom navigation */
+    width: 100% !important;
+  }
+
+  /* Sidebar to Bottom Navigation conversion */
+  .sidebar {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    top: auto !important;
+    width: 100% !important;
+    height: 68px !important;
+    flex-direction: row !important;
+    padding: 0 !important;
+    border-right: none !important;
+    border-top: 1px solid rgba(197, 160, 89, 0.15) !important;
+    background-color: #112d21 !important;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15) !important;
+    z-index: 1000 !important;
+  }
+
+  .sidebar::before {
+    display: none !important;
+  }
+
+  .sidebar-header {
+    display: none !important;
+  }
+
+  .sidebar nav {
+    flex: 1 !important;
+    height: 100% !important;
+  }
+
+  .sidebar nav .nav-list {
+    flex-direction: row !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    height: 100% !important;
+  }
+
+  /* Logout button list in sidebar */
+  .sidebar > div:last-child {
+    display: flex !important;
+    align-items: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: 100% !important;
+  }
+
+  .sidebar > div:last-child .nav-list {
+    flex-direction: row !important;
+    height: 100% !important;
+    padding: 0 12px 0 0 !important;
+  }
+
+  .sidebar > div:last-child li {
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  .nav-item {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    padding: 6px 10px !important;
+    font-size: 0.68rem !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+    border-left: none !important;
+    border-bottom: 3px solid transparent !important;
+    border-radius: 0 !important;
+    text-align: center !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .nav-item svg {
+    width: 20px !important;
+    height: 20px !important;
+    margin: 0 !important;
+  }
+
+  .nav-item.active {
+    color: var(--accent-gold-light) !important;
+    border-left-color: transparent !important;
+    border-bottom-color: var(--accent-gold) !important;
+    background-color: rgba(197, 160, 89, 0.08) !important;
+  }
+
+  /* Card and Form responsive layouts */
+  .card, .glass-card {
+    padding: 16px !important;
+  }
+
+  .grid-2-cols, .grid-3-cols, .grid-4-cols {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .dashboard-grid, .appointments-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+
+  .appointments-sidebar {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+  }
+
+  .appointments-sidebar > div {
+    flex: 1 !important;
+    min-width: 140px !important;
+  }
+
+  /* Table responsive adjustments */
+  .premium-table th, .premium-table td {
+    padding: 12px 14px !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* WhatsApp Responsive adjustments to avoid bottom bar collision */
+  .whatsapp-automation-fixed {
+    bottom: 84px !important;
+    right: 16px !important;
+  }
+  
+  .whatsapp-toast-fixed {
+    bottom: 84px !important;
+    right: 16px !important;
+    left: 16px !important;
+  }
+}
+

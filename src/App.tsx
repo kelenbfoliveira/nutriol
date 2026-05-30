@@ -9,6 +9,7 @@ import NewPatient from './pages/NewPatient';
 import Appointments from './pages/Appointments';
 import MealPlans from './pages/MealPlans';
 import ConfirmAppointment from './pages/ConfirmAppointment';
+import ViewMealPlan from './pages/ViewMealPlan';
 import Layout from './components/Layout';
 import './index.css';
 
@@ -20,6 +21,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/confirmar" element={<ConfirmAppointment />} />
+        <Route path="/plano-alimentar" element={<ViewMealPlan />} />
         
         {/* Protected Routes Wrapper */}
         <Route element={<Layout />}>

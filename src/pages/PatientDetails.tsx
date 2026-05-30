@@ -123,6 +123,19 @@ const NovaConsultaModal: React.FC<NovaConsultaModalProps> = ({ pacienteId, isOpe
       if (form.percentual_gordura) payload.percentual_gordura = parseFloat(form.percentual_gordura.replace(',', '.'));
 
       if (isEditing) {
+        // Se a data de consulta ou o próximo retorno mudaram, reseta as flags de WhatsApp e ajusta status
+        const dataMudou = consultaParaEditar.data_consulta !== datetimeString || 
+                          consultaParaEditar.proximo_retorno !== proximoRetornoString;
+        if (dataMudou) {
+          payload.whatsapp_confirmation_sent = false;
+          payload.whatsapp_reminder_sent = false;
+          payload.whatsapp_thankyou_sent = false;
+          
+          if (consultaParaEditar.status === 'reagendar') {
+            payload.status = 'agendada';
+          }
+        }
+
         const { error: dbError } = await supabase.from('consultas').update(payload).eq('id', consultaParaEditar.id);
         if (dbError) throw dbError;
       } else {
@@ -165,7 +178,7 @@ const NovaConsultaModal: React.FC<NovaConsultaModalProps> = ({ pacienteId, isOpe
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div className="grid-2-cols">
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Data do Atendimento *</label>
               <input type="date" name="data_consulta" value={form.data_consulta} onChange={handleChange} style={inputStyle} required />
@@ -184,7 +197,7 @@ const NovaConsultaModal: React.FC<NovaConsultaModalProps> = ({ pacienteId, isOpe
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+          <div className="grid-3-cols">
             <div className="form-group" style={{ marginBottom: 0, position: 'relative' }}>
               <label className="form-label">Cintura <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(opcional)</span></label>
               <input type="number" step="0.1" name="cintura" value={form.cintura} onChange={handleChange} placeholder="cm" style={{ ...inputStyle, paddingRight: '36px' }} />
@@ -207,7 +220,7 @@ const NovaConsultaModal: React.FC<NovaConsultaModalProps> = ({ pacienteId, isOpe
             <textarea name="observacoes" value={form.observacoes} onChange={handleChange} placeholder="Evolução, intercorrências, orientações..." style={{ ...inputStyle, minHeight: '90px', resize: 'vertical' }} />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div className="grid-2-cols">
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Próxima Consulta (Data)</label>
               <input type="date" name="proximo_retorno" value={form.proximo_retorno} onChange={handleChange} style={inputStyle} />
@@ -420,12 +433,32 @@ const PatientDetails: React.FC = () => {
   };
 
   // ── Enviar Agradecimento Pós-Consulta ──
-  const handleSendAgradecimento = () => {
+  const handleSendAgradecimento = async (consultaId: string) => {
     if (!whatsapp) return;
     const cleanNumber = formatWhatsAppNumber(whatsapp);
-    const message = `Olá, ${nome}! Foi um prazer atender você hoje. Seus dados e o plano alimentar atualizado já estão disponíveis no sistema. Qualquer dúvida, estou por aqui. Um abraço!`;
+
+    // Busca o plano alimentar mais recente do paciente
+    const { data: plano } = await supabase
+      .from('planos_alimentares')
+      .select('id')
+      .eq('paciente_id', id!)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const planLink = plano 
+      ? `${window.location.origin}/plano-alimentar?id=${plano.id}`
+      : `${window.location.origin}/patients/${id!}`;
+
+    const message = `Olá, ${nome}! Foi um prazer atender você hoje. Aqui está o seu plano alimentar: ${planLink}. Qualquer dúvida, estou por aqui. Um abraço!`;
     const url = `https://api.whatsapp.com/send?phone=${cleanNumber}&text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
+
+    // Atualiza o status no banco de dados para evitar reenvio
+    await supabase
+      .from('consultas')
+      .update({ whatsapp_thankyou_sent: true })
+      .eq('id', consultaId);
   };
 
   // ── handlePhotoChange ──
@@ -895,8 +928,40 @@ const PatientDetails: React.FC = () => {
                 <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem', margin: 0, fontWeight: 500 }}>
                   {idade ? `${idade} anos` : 'Idade não informada'} • {sexo || 'Sexo não informado'}
                 </p>
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
-                  {whatsapp ? `WhatsApp: ${whatsapp}` : ''}{email ? ` • E-mail: ${email}` : ''}
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', margin: '6px 0 0 0', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  {whatsapp && (
+                    <a 
+                      href={`https://api.whatsapp.com/send?phone=${formatWhatsAppNumber(whatsapp)}&text=${encodeURIComponent(`Olá, ${nome}! Passando para saber como você está indo com o plano alimentar e se tem alguma dúvida. Estou à disposição! Abraço.`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ 
+                        color: '#25d366', 
+                        textDecoration: 'none', 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: '6px',
+                        backgroundColor: 'rgba(37, 211, 102, 0.15)',
+                        padding: '4px 12px',
+                        borderRadius: '20px',
+                        fontWeight: 600,
+                        transition: 'all 0.25s ease',
+                        border: '1px solid rgba(37, 211, 102, 0.25)'
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(37, 211, 102, 0.25)'; e.currentTarget.style.transform = 'scale(1.03)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(37, 211, 102, 0.15)'; e.currentTarget.style.transform = 'scale(1)'; }}
+                      title="Enviar mensagem de acompanhamento / Dúvidas"
+                    >
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.458 5.704 1.46h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                      </svg>
+                      <span>WhatsApp: {whatsapp}</span>
+                    </a>
+                  )}
+                  {email && (
+                    <span style={{ color: 'rgba(255,255,255,0.7)', backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px 12px', borderRadius: '20px', fontWeight: 500 }}>
+                      E-mail: {email}
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -994,7 +1059,7 @@ const PatientDetails: React.FC = () => {
                 <label className="form-label">Nome Completo *</label>
                 <input type="text" value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome do paciente" />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+              <div className="grid-3-cols">
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Data de Nascimento</label>
                   <input type="date" value={dataNascimento} onChange={e => setDataNascimento(e.target.value)} />
@@ -1013,7 +1078,7 @@ const PatientDetails: React.FC = () => {
                   </select>
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+              <div className="grid-3-cols">
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">WhatsApp</label>
                   <input type="tel" value={whatsapp} onChange={e => setWhatsapp(formatPhoneNumber(e.target.value))} placeholder="(00) 00000-0000" />
@@ -1033,7 +1098,7 @@ const PatientDetails: React.FC = () => {
           {/* TAB: CLÍNICO */}
           {activeTab === 'clinico' && (
             <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', paddingBottom: '24px', borderBottom: '1px solid var(--border-color)' }}>
+              <div className="grid-3-cols" style={{ paddingBottom: '24px', borderBottom: '1px solid var(--border-color)' }}>
                 <div className="form-group" style={{ marginBottom: 0, position: 'relative' }}>
                   <label className="form-label">Peso Inicial</label>
                   <input type="number" step="0.1" value={peso} onChange={e => setPeso(e.target.value)} placeholder="0.0" style={{ paddingRight: '36px' }} />
@@ -1075,7 +1140,7 @@ const PatientDetails: React.FC = () => {
                 <input type="text" value={patologiasOutro} onChange={e => setPatologiasOutro(e.target.value)} placeholder="Outra condição..." />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div className="grid-2-cols">
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Restrições Alimentares</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
@@ -1094,7 +1159,7 @@ const PatientDetails: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div className="grid-2-cols">
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Medicamentos Contínuos</label>
                   <textarea value={medicamentos} onChange={e => setMedicamentos(e.target.value)} placeholder="Nomes, dosagens..." style={textareaStyle} />
@@ -1110,7 +1175,7 @@ const PatientDetails: React.FC = () => {
           {/* TAB: HÁBITOS */}
           {activeTab === 'habitos' && (
             <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '20px' }}>
+              <div className="grid-4-cols">
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Refeições/dia</label>
                   <input type="number" value={refeicoesDia} onChange={e => setRefeicoesDia(e.target.value)} placeholder="Ex: 4" />
@@ -1343,6 +1408,23 @@ const PatientDetails: React.FC = () => {
                             Agendada
                           </span>
                         )}
+
+                        {/* WhatsApp Status Badges */}
+                        {c.whatsapp_confirmation_sent && (
+                          <span style={{ fontSize: '0.65rem', color: '#16a34a', backgroundColor: '#f0fdf4', padding: '2px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px', border: '1px solid rgba(22, 163, 74, 0.2)', fontWeight: 500 }} title="Confirmação de WhatsApp enviada">
+                            💬 Confirmação
+                          </span>
+                        )}
+                        {c.whatsapp_reminder_sent && (
+                          <span style={{ fontSize: '0.65rem', color: '#0284c7', backgroundColor: '#f0f9ff', padding: '2px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px', border: '1px solid rgba(2, 132, 199, 0.2)', fontWeight: 500 }} title="Lembrete de WhatsApp enviado">
+                            💬 Lembrete
+                          </span>
+                        )}
+                        {c.whatsapp_thankyou_sent && (
+                          <span style={{ fontSize: '0.65rem', color: '#15803d', backgroundColor: '#f0fdf4', padding: '2px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px', border: '1px solid rgba(21, 128, 61, 0.2)', fontWeight: 500 }} title="Mensagem pós-atendimento enviada">
+                            💬 Agradecimento
+                          </span>
+                        )}
                       </div>
                     </button>
 
@@ -1394,7 +1476,7 @@ const PatientDetails: React.FC = () => {
                           {/* Agradecer WhatsApp Button */}
                           {(c.status === 'finalizada' || c.peso) && whatsapp && (
                             <button
-                              onClick={() => handleSendAgradecimento()}
+                              onClick={() => handleSendAgradecimento(c.id)}
                               style={{ 
                                 display: 'flex', 
                                 alignItems: 'center', 

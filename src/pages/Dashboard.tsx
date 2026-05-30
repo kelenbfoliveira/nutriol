@@ -222,26 +222,38 @@ const Dashboard: React.FC = () => {
 
           {/* Refined quote banner as glassmorphism card inside the header */}
           <div style={{
-            padding: '16px 24px',
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            backdropFilter: 'blur(10px)',
+            position: 'relative',
+            padding: '24px 32px',
+            backgroundColor: '#faf9f6',
             borderRadius: '16px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            maxWidth: '400px',
+            border: '1px solid var(--border-color)',
+            borderLeft: '4px solid var(--accent-gold)',
+            boxShadow: 'var(--shadow-sm)',
+            maxWidth: '500px',
+            overflow: 'hidden'
           }}>
+            {/* Subtle decorative background element */}
+            <div style={{ position: 'absolute', right: '-10%', top: '-20%', opacity: 0.05, transform: 'scale(2)', color: 'var(--primary)', pointerEvents: 'none' }}>
+              <svg width="100" height="100" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+              </svg>
+            </div>
+            
             <p style={{ 
               fontStyle: 'italic', 
-              color: 'var(--white)', 
-              fontSize: '0.9rem', 
-              lineHeight: 1.5,
+              color: 'var(--text-dark)', 
+              fontSize: '1rem', 
+              lineHeight: 1.6,
               fontWeight: 500,
+              position: 'relative',
+              zIndex: 1,
               margin: 0
             }}>
               "Nutrir não é apenas fornecer calorias, mas entregar saúde, vida e transformação a cada refeição."
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-              <div style={{ height: '1px', width: '12px', backgroundColor: 'var(--accent-gold)' }}></div>
-              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase', margin: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', position: 'relative', zIndex: 1 }}>
+              <div style={{ height: '1px', width: '20px', backgroundColor: 'var(--accent-gold)' }}></div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase', margin: 0 }}>
                 Inspiração Diária
               </p>
             </div>
@@ -371,7 +383,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Main Analytics Hub Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr', gap: '24px', marginBottom: '32px' }}>
+      <div className="dashboard-grid">
         
         {/* Left Column: Charts */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>

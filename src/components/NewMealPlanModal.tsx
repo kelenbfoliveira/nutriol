@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { X } from 'lucide-react';
+import { X, AlertCircle } from 'lucide-react';
 
 interface Patient {
   id: string;
@@ -37,6 +38,7 @@ const createEmptyPlan = () => {
 };
 
 const NewMealPlanModal: React.FC<NewMealPlanModalProps> = ({ isOpen, onClose, onSuccess, patients }) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -46,6 +48,49 @@ const NewMealPlanModal: React.FC<NewMealPlanModalProps> = ({ isOpen, onClose, on
   });
 
   if (!isOpen) return null;
+
+  if (patients.length === 0) {
+    return (
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
+        <div className="card fade-in" style={{ width: '100%', maxWidth: '480px', margin: '20px', padding: '32px', position: 'relative', textAlign: 'center' }}>
+          <button onClick={onClose} style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', color: 'var(--text-muted)' }}>
+            <X size={24} />
+          </button>
+          
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', backgroundColor: 'rgba(197, 160, 89, 0.1)', borderRadius: '50%', color: 'var(--accent-gold)', marginBottom: '20px' }}>
+            <AlertCircle size={32} />
+          </div>
+
+          <h2 style={{ fontSize: '1.5rem', marginBottom: '12px', color: 'var(--text-dark)' }}>Paciente Ativo Necessário</h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '28px', fontSize: '0.95rem', lineHeight: '1.6' }}>
+            Você não pode criar um plano alimentar sem antes cadastrar um paciente. Cadastre seu primeiro paciente para liberar este acesso.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <button 
+              type="button" 
+              className="btn-primary" 
+              style={{ width: '100%', padding: '12px' }}
+              onClick={() => {
+                onClose();
+                navigate('/patients/new');
+              }}
+            >
+              Cadastrar Paciente
+            </button>
+            <button 
+              type="button" 
+              className="btn-outline" 
+              style={{ width: '100%', padding: '12px', justifyContent: 'center' }} 
+              onClick={onClose}
+            >
+              Voltar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

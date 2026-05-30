@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar, Clock, CheckCircle2, AlertTriangle, CalendarRange, User } from 'lucide-react';
+import { parseLocalDateTime } from '../lib/utils';
 
 const ConfirmAppointment: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -84,8 +85,7 @@ const ConfirmAppointment: React.FC = () => {
   }
 
   const targetDate = consulta?.proximo_retorno || consulta?.data_consulta;
-  const dateStr = targetDate ? targetDate.replace(' ', 'T') : '';
-  const parsedDate = dateStr ? parseISO(dateStr) : null;
+  const parsedDate = targetDate ? parseLocalDateTime(targetDate) : null;
   const formattedDate = parsedDate ? format(parsedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : '';
   const formattedTime = parsedDate ? format(parsedDate, "HH:mm") : '';
 

@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { Calendar as CalendarIcon, Plus, Clock, Search, User, CheckCircle, Trash2 } from 'lucide-react';
-import { format, parseISO, isAfter, isToday, differenceInCalendarDays } from 'date-fns';
+import { format, isAfter, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import NewAppointmentModal from '../components/NewAppointmentModal';
-import { isTomorrow, formatWhatsAppNumber } from '../lib/utils';
+import { isTomorrow, formatWhatsAppNumber, getBusinessDaysDifference, parseLocalDateTime } from '../lib/utils';
 
 const Appointments: React.FC = () => {
   const [consultas, setConsultas] = useState<any[]>([]);
@@ -30,9 +30,9 @@ const Appointments: React.FC = () => {
   };
 
   const isWithinConfirmationWindow = (dateStr: string): boolean => {
-    const parsedDate = parseISO(dateStr.replace(' ', 'T'));
+    const parsedDate = parseLocalDateTime(dateStr);
     const today = new Date();
-    const diff = differenceInCalendarDays(parsedDate, today);
+    const diff = getBusinessDaysDifference(today, parsedDate);
     return diff >= 0 && diff <= 3;
   };
 
@@ -42,20 +42,19 @@ const Appointments: React.FC = () => {
 
     // A próxima consulta é o retorno se existir, senão a data do atendimento apenas se for futura
     const targetDate = consulta.proximo_retorno || (
-      isAfter(parseISO(consulta.data_consulta.replace(' ', 'T')), new Date()) ? consulta.data_consulta : null
+      isAfter(parseLocalDateTime(consulta.data_consulta), new Date()) ? consulta.data_consulta : null
     );
     if (!targetDate) return;
 
     const cleanNumber = formatWhatsAppNumber(rawNumber);
     const patientName = consulta.pacientes?.nome || '';
-    const dateStr = targetDate.replace(' ', 'T');
-    const parsedDate = parseISO(dateStr);
+    const parsedDate = parseLocalDateTime(targetDate);
     const formattedDate = format(parsedDate, "dd/MM/yyyy");
     const formattedTime = format(parsedDate, "HH:mm");
 
     let message = '';
     if (type === 'lembrete') {
-      message = `Olá, ${patientName}! Tudo bem? Passando para lembrar da nossa consulta hoje, dia ${formattedDate} às ${formattedTime}h. Nos vemos em breve! Abraço.`;
+      message = `Olá, ${patientName}! Tudo bem? Passando para lembrar da nossa consulta amanhã, dia ${formattedDate} às ${formattedTime}h. Nos vemos em breve! Abraço.`;
       
       // Atualiza o status no banco de dados para evitar reenvio
       const { error } = await supabase
@@ -74,6 +73,16 @@ const Appointments: React.FC = () => {
         message = `Olá, ${patientName}! Gostaria de confirmar sua consulta agendada para amanhã, dia ${formattedDate} às ${formattedTime}h. Por favor, confirme sua presença clicando no link a seguir: ${confirmationLink}`;
       } else {
         message = `Olá, ${patientName}! Gostaria de confirmar sua consulta agendada para o dia ${formattedDate} às ${formattedTime}h. Por favor, confirme sua presença clicando no link a seguir: ${confirmationLink}`;
+      }
+
+      // Atualiza o status no banco de dados para evitar reenvio
+      const { error } = await supabase
+        .from('consultas')
+        .update({ whatsapp_confirmation_sent: true })
+        .eq('id', consulta.id);
+      
+      if (!error) {
+        setConsultas(prev => prev.map(c => c.id === consulta.id ? { ...c, whatsapp_confirmation_sent: true } : c));
       }
     }
 
@@ -118,7 +127,7 @@ const Appointments: React.FC = () => {
 
   const upcomingConsultas = filteredConsultas.filter(c => {
     const targetDate = c.proximo_retorno || c.data_consulta;
-    const parsed = parseISO(targetDate.replace(' ', 'T'));
+    const parsed = parseLocalDateTime(targetDate);
     return isAfter(parsed, new Date()) || isToday(parsed);
   }).sort((a, b) => {
     const dateA = (a.proximo_retorno || a.data_consulta).replace(' ', 'T');
@@ -127,7 +136,7 @@ const Appointments: React.FC = () => {
   });
   const pastConsultas = filteredConsultas.filter(c => {
     const targetDate = c.proximo_retorno || c.data_consulta;
-    const parsed = parseISO(targetDate.replace(' ', 'T'));
+    const parsed = parseLocalDateTime(targetDate);
     return !isAfter(parsed, new Date()) && !isToday(parsed);
   });
 
@@ -147,9 +156,9 @@ const Appointments: React.FC = () => {
         </button>
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '20px', alignItems: 'start' }}>
+      <div className="appointments-grid">
         {/* Left Column: Stats */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="appointments-sidebar">
           {/* Month card */}
           <div className="glass-card" style={{ padding: '20px', textAlign: 'center' }}>
             <div style={{ width: 48, height: 48, background: 'linear-gradient(135deg, var(--primary), var(--primary-light))', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
@@ -216,7 +225,6 @@ const Appointments: React.FC = () => {
                 ) : upcomingConsultas.map(consulta => {
                   const targetDate = consulta.proximo_retorno || consulta.data_consulta;
                   const statusCalculado = getConsultaStatus(consulta);
-                  const isDateToday = isToday(parseISO(targetDate.replace(' ', 'T')));
                   const hasWhatsApp = !!consulta.pacientes?.whatsapp;
 
                   const isConfirmable = isWithinConfirmationWindow(targetDate) && 
@@ -224,7 +232,7 @@ const Appointments: React.FC = () => {
                                        statusCalculado !== 'cancelada' && 
                                        statusCalculado !== 'finalizada';
 
-                  const isLembreteable = isDateToday && 
+                  const isLembreteable = isTomorrow(targetDate) && 
                                          statusCalculado === 'confirmada' && 
                                          !consulta.whatsapp_reminder_sent;
                   return (
@@ -235,10 +243,10 @@ const Appointments: React.FC = () => {
                     >
                       <div className="ticket-date-box" style={{ padding: '8px 12px', minWidth: '64px', backgroundColor: deleteConfirmId === consulta.id ? '#fee2e2' : undefined, borderColor: deleteConfirmId === consulta.id ? '#fca5a5' : undefined }}>
                         <p style={{ fontSize: '0.7rem', color: deleteConfirmId === consulta.id ? '#ef4444' : 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, margin: 0 }}>
-                          {format(parseISO(targetDate.replace(' ', 'T')), 'MMM', { locale: ptBR })}
+                          {format(parseLocalDateTime(targetDate), 'MMM', { locale: ptBR })}
                         </p>
                         <p style={{ fontSize: '1.3rem', fontWeight: 'bold', color: deleteConfirmId === consulta.id ? '#ef4444' : 'var(--primary)', lineHeight: 1, margin: '2px 0 0 0' }}>
-                          {format(parseISO(targetDate.replace(' ', 'T')), 'dd')}
+                          {format(parseLocalDateTime(targetDate), 'dd')}
                         </p>
                       </div>
                       <div style={{ flex: 1 }}>
@@ -276,7 +284,7 @@ const Appointments: React.FC = () => {
                         </h4>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', margin: '3px 0 0 0' }}>
                           <Clock size={12} color="var(--primary)" />
-                          {targetDate.length > 10 ? format(parseISO(targetDate.replace(' ', 'T')), 'HH:mm') : '--:--'} hs
+                          {targetDate.length > 10 ? format(parseLocalDateTime(targetDate), 'HH:mm') : '--:--'} hs
                         </p>
                       </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -387,7 +395,7 @@ const Appointments: React.FC = () => {
                         <div style={{ flex: 1 }}>
                           <h4 style={{ fontSize: '0.9rem', color: 'var(--text-dark)', fontWeight: 500, margin: 0 }}>{consulta.pacientes?.nome || 'Paciente Desconhecido'}</h4>
                           <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '2px 0 0' }}>
-                            {format(parseISO(consulta.data_consulta.replace(' ', 'T')), "dd 'de' MMM 'às' HH:mm", { locale: ptBR })}
+                            {format(parseLocalDateTime(consulta.data_consulta), "dd 'de' MMM 'às' HH:mm", { locale: ptBR })}
                           </p>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

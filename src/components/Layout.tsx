@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { supabase } from '../lib/supabase';
+import WhatsAppAutomation from './WhatsAppAutomation';
 
 const Layout: React.FC = () => {
   const navigate = useNavigate();
@@ -42,6 +43,7 @@ const Layout: React.FC = () => {
       <main className="main-content">
         <Outlet />
       </main>
+      <WhatsAppAutomation />
     </div>
   );
 };

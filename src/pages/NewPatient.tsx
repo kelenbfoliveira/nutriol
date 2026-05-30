@@ -370,7 +370,7 @@ const NewPatient: React.FC = () => {
                 <input type="text" required value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Maria da Silva" />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
+              <div className="grid-3-cols">
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Data de Nascimento</label>
                   <input type="date" value={dataNascimento} onChange={(e) => setDataNascimento(e.target.value)} />
@@ -390,7 +390,7 @@ const NewPatient: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
+              <div className="grid-3-cols">
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">WhatsApp</label>
                   <input type="tel" value={whatsapp} onChange={(e) => setWhatsapp(formatPhoneNumber(e.target.value))} placeholder="(00) 00000-0000" />
@@ -410,7 +410,7 @@ const NewPatient: React.FC = () => {
           {/* TAB 2: CLÍNICO */}
           {activeTab === 'clinico' && (
             <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px', paddingBottom: '24px', borderBottom: '1px solid var(--border-color)' }}>
+              <div className="grid-3-cols" style={{ paddingBottom: '24px', borderBottom: '1px solid var(--border-color)' }}>
                 <div className="form-group" style={{ marginBottom: 0, position: 'relative' }}>
                   <label className="form-label">Peso Atual</label>
                   <input type="number" step="0.1" value={peso} onChange={(e) => setPeso(e.target.value)} placeholder="0.0" style={{ paddingRight: '40px' }} />
@@ -463,7 +463,7 @@ const NewPatient: React.FC = () => {
               </div>
 
               {/* Similar structures for Restrições and Alergias to keep it compact */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+              <div className="grid-2-cols">
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Restrições Alimentares</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
@@ -483,7 +483,7 @@ const NewPatient: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+              <div className="grid-2-cols">
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Medicamentos Contínuos</label>
                   <textarea value={medicamentos} onChange={(e) => setMedicamentos(e.target.value)} placeholder="Nomes, dosagens..." style={{ width: '100%', padding: '12px 16px', border: '1px solid var(--border-color)', borderRadius: '8px', outline: 'none', minHeight: '80px', fontFamily: 'inherit' }} />
@@ -499,7 +499,7 @@ const NewPatient: React.FC = () => {
           {/* TAB 3: HÁBITOS */}
           {activeTab === 'habitos' && (
             <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '24px' }}>
+              <div className="grid-4-cols">
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Refeições/dia</label>
                   <input type="number" value={refeicoesDia} onChange={(e) => setRefeicoesDia(e.target.value)} placeholder="Ex: 4" />

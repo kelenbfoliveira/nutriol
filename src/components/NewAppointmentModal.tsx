@@ -106,7 +106,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({ isOpen, onClo
             </select>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div className="grid-2-cols">
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Data *</label>
               <input type="date" name="data_consulta" required value={formData.data_consulta} onChange={handleChange} />
